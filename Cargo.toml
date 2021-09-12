@@ -1,0 +1,10 @@
+[package]
+name = "redrock"
+version = "0.1.0"
+edition = "2018"
+resolver = "2"
+
+[dependencies]
+wgpu = "0.10.1"
+winit = "0.25.0"
+pollster = "0.2.0"
