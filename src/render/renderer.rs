@@ -5,7 +5,7 @@ use wgpu::util::{DeviceExt, BufferInitDescriptor};
 use crate::game::{GameState, ObjectState};
 use crate::render::Window;
 
-use super::model::{Vertex, FaceIndices, Instance};
+use super::model::{Vertex, FaceIndices, ModelInstance};
 
 const MAX_INSTANCES: u32 = 128;
 
@@ -24,9 +24,9 @@ pub struct Renderer {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
 
-    pipeline: wgpu::RenderPipeline,
+    model_pipeline: wgpu::RenderPipeline,
     model_buffers: HashMap<String, ModelBuffers>,
-    instance_buffer: wgpu::Buffer,
+    model_instances_buffer: wgpu::Buffer,
 }
 
 impl Renderer {
@@ -94,7 +94,7 @@ impl Renderer {
         };
 
         let instance_buffer_layout = wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<Instance>() as wgpu::BufferAddress,
+            array_stride: std::mem::size_of::<ModelInstance>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &[
                 //position
@@ -106,16 +106,16 @@ impl Renderer {
             ]
         };
 
-        let instances_init = &[Instance::default(); MAX_INSTANCES as usize];
-        let instance_buffer = device.create_buffer_init(&BufferInitDescriptor {
+        let model_instances_init = &[ModelInstance::default(); MAX_INSTANCES as usize];
+        let model_instances_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: None,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             contents: unsafe {
-                std::slice::from_raw_parts(instances_init.as_ptr() as *const u8, instances_init.len() * std::mem::size_of::<Instance>())
+                std::slice::from_raw_parts(model_instances_init.as_ptr() as *const u8, model_instances_init.len() * std::mem::size_of::<ModelInstance>())
             },
         });
 
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let model_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
@@ -157,9 +157,9 @@ impl Renderer {
             queue,
             config,
 
-            pipeline,
+            model_pipeline,
             model_buffers: HashMap::new(),
-            instance_buffer,
+            model_instances_buffer,
         }
     }
 
@@ -212,38 +212,36 @@ impl Renderer {
                 label: None,
             });
 
-            {
-                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: None,
-                    color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                            store: true,
-                        }
-                    }],
-                    depth_stencil_attachment: None,
-                });
-
-                render_pass.set_pipeline(&self.pipeline);
-                for (_id, object) in game_state.objects.iter() {
-                    let model_buffer = self.model_buffers.get("test").unwrap();
-                    render_pass.set_vertex_buffer(0, model_buffer.vertex_buffer.slice(..));
-                    render_pass.set_index_buffer(model_buffer.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-
-                    let instances: &[Instance] = &[
-                        Instance {position: object.position},
-                    ];
-                    self.queue.write_buffer(&self.instance_buffer, 0 as wgpu::BufferAddress, unsafe {
-                        std::slice::from_raw_parts(instances.as_ptr() as *const u8, instances.len() * std::mem::size_of::<Instance>())
-                    });
-                    render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-                    
-                    render_pass.draw_indexed(0..model_buffer.face_count, 0, 0..(instances.len() as u32));
-                }
-            }
-
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                        store: true,
+                    }
+                }],
+                depth_stencil_attachment: None,
+            });
+            
+            //render models
+            render_pass.set_pipeline(&self.model_pipeline);
+            let model_instances: Vec<ModelInstance> = game_state.objects.iter()
+                .map(|(_id, object)| ModelInstance {
+                    position: object.position,
+                })
+                .collect();
+            self.queue.write_buffer(&self.model_instances_buffer, 0 as wgpu::BufferAddress, unsafe {
+                std::slice::from_raw_parts(model_instances.as_ptr() as *const u8, std::cmp::min(MAX_INSTANCES as usize, model_instances.len()) * std::mem::size_of::<ModelInstance>())
+            });
+            let model_buffer = self.model_buffers.get("test").unwrap();
+            render_pass.set_vertex_buffer(0, model_buffer.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(model_buffer.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.set_vertex_buffer(1, self.model_instances_buffer.slice(..));
+            render_pass.draw_indexed(0..model_buffer.face_count, 0, 0..(model_instances.len() as u32));
+            
+            drop(render_pass);
             self.queue.submit(std::iter::once(encoder.finish()));
         }
     }

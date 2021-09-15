@@ -18,8 +18,9 @@ pub type FaceIndices = [u16; 3];
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
 #[repr(C)]
-pub struct Instance {
+pub struct ModelInstance {
     pub position: Vec3f,
+    //todo: bone data
 }
 
 #[derive(Clone, Debug)]

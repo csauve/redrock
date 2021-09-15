@@ -22,6 +22,7 @@ const TICK_DURATION_SEC: f32 = 1.0 / TICK_RATE as f32;
 fn main() {
     let mut game_state = GameState::new();
     game_state.objects.add(ObjectState { position: Vec3f::default() }).unwrap();
+    game_state.objects.add(ObjectState { position: Vec3f::new(-0.5, 1.0, 0.0) }).unwrap();
 
     let mut prev_time = SystemTime::now();
     let mut accum_nanos: u128 = 0;
