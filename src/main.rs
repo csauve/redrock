@@ -27,9 +27,9 @@ fn main() {
     let mut accum_nanos: u128 = 0;
 
     let mut window = Window::new(WINDOW_TITLE);
-    let renderer = pollster::block_on(Renderer::new(&window));
+    let mut renderer = pollster::block_on(Renderer::new(&window));
 
-    run_event_loop(window, move |mut inputs| {
+    run_event_loop(window, move |mut inputs, resize| {
         let curr_time = SystemTime::now();
         if let Ok(elapsed) = curr_time.duration_since(prev_time) {
             accum_nanos += elapsed.as_nanos();
@@ -37,6 +37,10 @@ fn main() {
             while accum_nanos >= TICK_DURATION_NANOS as u128 {
                 do_tick(&mut game_state);
                 accum_nanos -= TICK_DURATION_NANOS as u128;
+            }
+
+            if let Some((width, height)) = resize {
+                renderer.resize(width, height);
             }
 
             renderer.render(&game_state);
@@ -51,7 +55,7 @@ fn do_tick(game_state: &mut GameState) {
     dbg!(game_state.tick);
 
     for (_id, item) in game_state.objects.iter_mut() {
-        item.position.x = 1.0;
+        item.position.x += 0.01;
     }
 
     game_state.tick = game_state.tick.wrapping_add(1);

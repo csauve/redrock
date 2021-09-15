@@ -2,6 +2,7 @@ use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 // use std::cmp::{max, min};
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
+#[repr(C)]
 pub struct Vec3f {
     pub x: f32,
     pub y: f32,
@@ -12,6 +13,11 @@ impl Vec3f {
     #[inline]
     pub fn new(x: f32, y: f32, z: f32) -> Vec3f {
         Vec3f { x, y, z }
+    }
+
+    #[inline]
+    pub fn from_slice(slice: &[f32; 3]) -> Vec3f {
+        Vec3f::new(slice[0], slice[1], slice[2])
     }
 
     #[inline]
