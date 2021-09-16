@@ -6,8 +6,10 @@ mod game;
 mod math;
 mod util;
 mod render;
+mod tags;
 
 use std::time::{Duration, SystemTime};
+use tags::Map;
 use game::{GameState, ObjectState};
 use math::Vec3f;
 use render::{Window, run_event_loop, InputEvent, Renderer};
@@ -20,9 +22,8 @@ const TICK_DURATION_SEC: f32 = 1.0 / TICK_RATE as f32;
 // const MAX_TICKS_PER_FRAME: u32 = 10; //todo: prevent spiral of death
 
 fn main() {
-    let mut game_state = GameState::new();
-    game_state.objects.add(ObjectState { position: Vec3f::default() }).unwrap();
-    game_state.objects.add(ObjectState { position: Vec3f::new(-0.5, 1.0, 0.0) }).unwrap();
+    let map = Map::load("maps/example.toml");
+    let mut game_state = GameState::from_map(&map);
 
     let mut prev_time = SystemTime::now();
     let mut accum_nanos: u128 = 0;
@@ -53,10 +54,10 @@ fn main() {
 }
 
 fn do_tick(game_state: &mut GameState) {
-    dbg!(game_state.tick);
+    // dbg!(game_state.tick);
 
-    for (_id, item) in game_state.objects.iter_mut() {
-        item.position.x += 0.01;
+    for (_id, _item) in game_state.objects.iter_mut() {
+        // item.position.x += 0.001;
     }
 
     game_state.tick = game_state.tick.wrapping_add(1);
@@ -64,6 +65,15 @@ fn do_tick(game_state: &mut GameState) {
 
 fn handle_inputs(game_state: &mut GameState, inputs: &mut Vec<InputEvent>) {
     for input in inputs.drain(..) {
-        dbg!(input);
+        dbg!(&input);
+        match input {
+            //A
+            InputEvent::Key {code: 30, pressed: true} => {
+                if let Some(player) = game_state.objects.get_mut(game_state.player_object_id) {
+                    player.position.x += 0.01;
+                }
+            },
+            _ => ()
+        }
     }
 }

@@ -1,4 +1,4 @@
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct SaltyId {
     salt: u16,
@@ -6,10 +6,12 @@ pub struct SaltyId {
 }
 
 impl SaltyId {
-    pub fn new(salt: u16, index: u16) -> SaltyId {
+    pub const fn new(salt: u16, index: u16) -> SaltyId {
         SaltyId {salt, index}
     }
 }
+
+pub const NONE: SaltyId = SaltyId::new(0, 0);
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -58,7 +60,7 @@ impl<T: Copy + Default, const N: usize> SaltyBuffer<T, { N }> {
         slot.data = item;
         self.count += 1;
         slot.salt = slot.salt.checked_add(1).unwrap_or(1);
-        let id = SaltyId::new(self.head, slot.salt);
+        let id = SaltyId::new(slot.salt, self.head);
         while (self.head as usize) < N && self.items[self.head as usize].salt != 0 {
             self.head += 1;
         }

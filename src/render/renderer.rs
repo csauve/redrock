@@ -65,7 +65,7 @@ impl Renderer {
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: None,
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("model_shader.wgsl").into()),
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor  {
@@ -106,14 +106,11 @@ impl Renderer {
             ]
         };
 
-        let model_instances_init = &[ModelInstance::default(); MAX_INSTANCES as usize];
-        let model_instances_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: None,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            contents: unsafe {
-                std::slice::from_raw_parts(model_instances_init.as_ptr() as *const u8, model_instances_init.len() * std::mem::size_of::<ModelInstance>())
-            },
-        });
+        let model_instances_buffer = Renderer::create_buffer(
+            &device,
+            wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            &[ModelInstance::default(); MAX_INSTANCES as usize]
+        );
 
         let model_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
@@ -169,6 +166,16 @@ impl Renderer {
         self.surface.configure(&self.device, &self.config);
     }
 
+    fn create_buffer<T>(device: &wgpu::Device, usage: wgpu::BufferUsages, contents: &[T]) -> wgpu::Buffer {
+        device.create_buffer_init(&BufferInitDescriptor {
+            label: None,
+            usage,
+            contents: unsafe {
+                std::slice::from_raw_parts(contents.as_ptr() as *const u8, contents.len() * std::mem::size_of::<T>())
+            },
+        })
+    }
+
     pub fn render(&mut self, game_state: &GameState) {
         //todo: move to resource cache
         if !self.model_buffers.contains_key("test") {
@@ -182,20 +189,8 @@ impl Renderer {
                 0, 1, 3,
                 1, 2, 3,
             ];
-            let vertex_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
-                label: None,
-                usage: wgpu::BufferUsages::VERTEX,
-                contents: unsafe {
-                    std::slice::from_raw_parts(verts.as_ptr() as *const u8, verts.len() * std::mem::size_of::<Vertex>())
-                },
-            });
-            let index_buffer = self.device.create_buffer_init(&BufferInitDescriptor {
-                label: None,
-                usage: wgpu::BufferUsages::INDEX,
-                contents: unsafe {
-                    std::slice::from_raw_parts(indices.as_ptr() as *const u8, indices.len() * std::mem::size_of::<u16>())
-                },
-            });
+            let vertex_buffer = Renderer::create_buffer(&self.device, wgpu::BufferUsages::VERTEX, verts);
+            let index_buffer = Renderer::create_buffer(&self.device, wgpu::BufferUsages::INDEX, indices);
             self.model_buffers.insert("test".into(), ModelBuffers {
                 vertex_buffer,
                 vertex_count: verts.len() as u32,

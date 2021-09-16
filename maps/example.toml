@@ -1,0 +1,12 @@
+[physics.biped]
+mass = 1.0
+
+[object.player]
+physics = "biped"
+
+[globals]
+gravity_scale = 1.0
+player_object = "player"
+
+[scenario]
+player_location = [0.0, 0.0, 0.0]

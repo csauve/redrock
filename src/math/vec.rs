@@ -1,7 +1,8 @@
+use serde::{Serialize, Deserialize};
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 // use std::cmp::{max, min};
 
-#[derive(Copy, Clone, PartialEq, Debug, Default)]
+#[derive(Copy, Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Vec3f {
     pub x: f32,
