@@ -9,9 +9,19 @@ impl SaltyId {
     pub const fn new(salt: u16, index: u16) -> SaltyId {
         SaltyId {salt, index}
     }
+
+    pub fn is_some(&self) -> bool {
+        self.salt != 0
+    }
 }
 
 pub const NONE: SaltyId = SaltyId::new(0, 0);
+
+impl Default for SaltyId {
+    fn default() -> SaltyId {
+        NONE
+    }
+}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -29,6 +39,12 @@ pub struct SaltyBuffer<T: Copy + Default, const N: usize> {
     items: [Salty<T>; N],
     head: u16,
     count: u16,
+}
+
+impl<T: Copy + Default, const N: usize> Default for SaltyBuffer<T, { N }> {
+    fn default() -> Self {
+        SaltyBuffer::new()
+    }
 }
 
 impl<T: Copy + Default, const N: usize> SaltyBuffer<T, { N }> {

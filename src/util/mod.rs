@@ -1,5 +1,2 @@
-mod ringbuffer;
-mod saltybuffer;
-
-pub use self::ringbuffer::*;
-pub use self::saltybuffer::*;
+pub mod ringbuffer;
+pub mod saltybuffer;

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use wgpu;
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
-use crate::game::{GameState, ObjectState};
+use crate::game::Game;
 use crate::render::Window;
 
 use super::model::{Vertex, FaceIndices, ModelInstance};
@@ -176,7 +176,7 @@ impl Renderer {
         })
     }
 
-    pub fn render(&mut self, game_state: &GameState) {
+    pub fn render(&mut self, game: &Game) {
         //todo: move to resource cache
         if !self.model_buffers.contains_key("test") {
             let verts = &[
@@ -222,7 +222,7 @@ impl Renderer {
             
             //render models
             render_pass.set_pipeline(&self.model_pipeline);
-            let model_instances: Vec<ModelInstance> = game_state.objects.iter()
+            let model_instances: Vec<ModelInstance> = game.state.objects.iter()
                 .map(|(_id, object)| ModelInstance {
                     position: object.position,
                 })

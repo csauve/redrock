@@ -8,11 +8,17 @@ mod globals;
 mod object;
 mod physics;
 
+pub use scenario::*;
+pub use globals::*;
+pub use object::*;
+pub use physics::*;
+
+type TagString = String; //todo
+pub type TagId = TagString;
+
 mod prelude {
     pub use serde::{Serialize, Deserialize};
-
-    pub type TagString = String; //todo
-    pub type TagId = TagString;
+    pub use super::TagId;
 
     #[macro_export]
     macro_rules! tag {
