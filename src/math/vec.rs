@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign, MulAssign};
 // use std::cmp::{max, min};
 
 #[derive(Copy, Clone, PartialEq, Debug, Default, Serialize, Deserialize)]
@@ -90,8 +90,23 @@ impl Vec3f {
     }
 
     #[inline]
-    pub fn normalize(self) -> Vec3f {
-        self / self.length()
+    pub fn normalize(self) -> Option<Vec3f> {
+        let len = self.length();
+        if 0.0 == len {
+            None
+        } else {
+            Some(self / self.length())
+        }
+    }
+
+    #[inline]
+    pub fn normalize_or_zero(self) -> Vec3f {
+        let len = self.length();
+        if 0.0 == len {
+            self
+        } else {
+            self / self.length()
+        }
     }
 }
 
@@ -132,6 +147,14 @@ impl Mul<f32> for Vec3f {
     type Output = Vec3f;
     fn mul(self, rhs: f32) -> Vec3f {
         Vec3f::new(self.x * rhs, self.y * rhs, self.z * rhs)
+    }
+}
+
+impl MulAssign<f32> for Vec3f {
+    fn mul_assign(&mut self, rhs: f32) {
+        self.x *= rhs;
+        self.y *= rhs;
+        self.z *= rhs;
     }
 }
 

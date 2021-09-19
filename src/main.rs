@@ -14,7 +14,7 @@ use render::{Window, run_event_loop, InputEvent, Renderer};
 use pollster;
 
 const WINDOW_TITLE: &str = "redrock";
-const TICK_RATE: u32 = 60;
+const TICK_RATE: u32 = 120;
 const TICK_DURATION_NANOS: u32 = 1000000000 / TICK_RATE;
 const TICK_DURATION_SEC: f32 = 1.0 / TICK_RATE as f32;
 // const MAX_TICKS_PER_FRAME: u32 = 10; //todo: prevent spiral of death
@@ -54,6 +54,18 @@ fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) {
     for input in inputs.drain(..) {
         dbg!(&input);
         match input {
+            //W
+            InputEvent::Key {code: 17, pressed} => {
+                game.apply_action(PlayerAction::Forward(pressed));
+            },
+            //S
+            InputEvent::Key {code: 31, pressed} => {
+                game.apply_action(PlayerAction::Back(pressed));
+            },
+            //D
+            InputEvent::Key {code: 32, pressed} => {
+                game.apply_action(PlayerAction::Right(pressed));
+            },
             //A
             InputEvent::Key {code: 30, pressed} => {
                 game.apply_action(PlayerAction::Left(pressed));

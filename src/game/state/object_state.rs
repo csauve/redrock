@@ -4,6 +4,7 @@ use super::super::tags::Object;
 
 state! {
     pub struct ObjectState {
+        pub tag: TagId,
         pub position: Vec3f,
         pub physics: SaltyId,
     }

@@ -7,6 +7,8 @@ physics = "biped"
 [globals]
 gravity_scale = 1.0
 player_object = "player"
+player_accel = 0.01
+player_drag_scale = 0.2
 
 [scenario]
 player_location = [0.0, 0.0, 0.0]
