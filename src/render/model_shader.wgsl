@@ -14,7 +14,7 @@ struct VertexOutput {
 [[stage(vertex)]]
 fn vertex_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
   var out: VertexOutput;
-  let pos = vert.position + instance.position;
+  let pos = (vert.position + instance.position) * 0.1;
   out.clip_position = vec4<f32>(pos, 1.0);
   return out;
 }

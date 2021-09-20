@@ -5,7 +5,7 @@ use wgpu::util::{DeviceExt, BufferInitDescriptor};
 use crate::game::Game;
 use crate::render::Window;
 
-use super::model::{Vertex, FaceIndices, ModelInstance};
+use super::model::{Vertex, FaceIndices, ModelInstance, Model};
 
 const MAX_INSTANCES: u32 = 128;
 
@@ -179,23 +179,14 @@ impl Renderer {
     pub fn render(&mut self, game: &Game) {
         //todo: move to resource cache
         if !self.model_buffers.contains_key("test") {
-            let verts = &[
-                Vertex::at(&[0.5, -0.5, 0.0]),
-                Vertex::at(&[0.5, 0.5, 0.0]),
-                Vertex::at(&[-0.5, 0.5, 0.0]),
-                Vertex::at(&[-0.5, -0.5, 0.0]),
-            ];
-            let indices: &[u16] = &[
-                0, 1, 3,
-                1, 2, 3,
-            ];
-            let vertex_buffer = Renderer::create_buffer(&self.device, wgpu::BufferUsages::VERTEX, verts);
-            let index_buffer = Renderer::create_buffer(&self.device, wgpu::BufferUsages::INDEX, indices);
+            let model = Model::from_gltf("maps/cube.gltf").expect("Failed to load model");
+            let vertex_buffer = Renderer::create_buffer(&self.device, wgpu::BufferUsages::VERTEX, model.vertices_slice());
+            let index_buffer = Renderer::create_buffer(&self.device, wgpu::BufferUsages::INDEX, model.indices_slice());
             self.model_buffers.insert("test".into(), ModelBuffers {
                 vertex_buffer,
-                vertex_count: verts.len() as u32,
+                vertex_count: model.vertices_slice().len() as u32,
                 index_buffer,
-                face_count: indices.len() as u32,
+                face_count: model.indices_slice().len() as u32,
             });
         }
 

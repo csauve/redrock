@@ -3,6 +3,7 @@ mass = 1.0
 
 [object.player]
 physics = "biped"
+model = "box.gltf"
 
 [globals]
 gravity_scale = 1.0

@@ -10,3 +10,4 @@ winit = "0.25.0"
 pollster = "0.2.0"
 serde = { version = "1.0.130", features = ["derive"] }
 toml = "0.5"
+gltf = { version = "0.16.0", features = ["utils"] }
