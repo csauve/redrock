@@ -11,11 +11,19 @@ struct VertexOutput {
   [[builtin(position)]] clip_position: vec4<f32>;
 };
 
+[[block]]
+struct CameraUniform {
+  view_proj: mat4x4<f32>;
+};
+
+[[group(0), binding(0)]]
+var<uniform> camera: CameraUniform;
+
 [[stage(vertex)]]
 fn vertex_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
   var out: VertexOutput;
-  let pos = (vert.position + instance.position) * 0.1;
-  out.clip_position = vec4<f32>(pos, 1.0);
+  let pos = (vert.position + instance.position);
+  out.clip_position = camera.view_proj * vec4<f32>(pos, 1.0);
   return out;
 }
 

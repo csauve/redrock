@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use wgpu;
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
 use crate::game::Game;
+use crate::math::Mat4x4;
 use crate::render::Window;
 
 use super::model::{Vertex, FaceIndices, ModelInstance, Model};
@@ -23,6 +24,9 @@ pub struct Renderer {
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
+
+    camera_buffer: wgpu::Buffer,
+    camera_bind_group: wgpu::BindGroup,
 
     model_pipeline: wgpu::RenderPipeline,
     model_buffers: HashMap<String, ModelBuffers>,
@@ -68,12 +72,6 @@ impl Renderer {
             source: wgpu::ShaderSource::Wgsl(include_str!("model_shader.wgsl").into()),
         });
 
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor  {
-            label: None,
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
-        });
-
         let vert_buffer_layout = wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
@@ -111,6 +109,47 @@ impl Renderer {
             wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             &[ModelInstance::default(); MAX_INSTANCES as usize]
         );
+
+        let camera_buffer = Renderer::create_buffer(
+            &device,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            Mat4x4::default().to_slice()
+        );
+
+        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None
+                }
+            ],
+        });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &&camera_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                }
+            ]
+        });
+        
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor  {
+            label: None,
+            bind_group_layouts: &[
+                &camera_bind_group_layout
+            ],
+            push_constant_ranges: &[],
+        });
 
         let model_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
@@ -154,6 +193,9 @@ impl Renderer {
             queue,
             config,
 
+            camera_buffer,
+            camera_bind_group,
+
             model_pipeline,
             model_buffers: HashMap::new(),
             model_instances_buffer,
@@ -170,10 +212,14 @@ impl Renderer {
         device.create_buffer_init(&BufferInitDescriptor {
             label: None,
             usage,
-            contents: unsafe {
-                std::slice::from_raw_parts(contents.as_ptr() as *const u8, contents.len() * std::mem::size_of::<T>())
-            },
+            contents: Renderer::bytes_slice(contents)
         })
+    }
+
+    fn bytes_slice<T>(data: &[T]) -> &[u8] {
+        unsafe {
+            std::slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * std::mem::size_of::<T>())
+        }
     }
 
     pub fn render(&mut self, game: &Game) {
@@ -192,6 +238,8 @@ impl Renderer {
 
 
         if let Ok(wgpu::SurfaceFrame {output, ..}) = self.surface.get_current_frame() {
+            let projection_matrix = game.state.camera.to_projection_matrix(self.config.width, self.config.height).transpose();
+
             let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
             let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -221,7 +269,9 @@ impl Renderer {
             self.queue.write_buffer(&self.model_instances_buffer, 0 as wgpu::BufferAddress, unsafe {
                 std::slice::from_raw_parts(model_instances.as_ptr() as *const u8, std::cmp::min(MAX_INSTANCES as usize, model_instances.len()) * std::mem::size_of::<ModelInstance>())
             });
+            self.queue.write_buffer(&self.camera_buffer, 0, Renderer::bytes_slice(projection_matrix.to_slice()));
             let model_buffer = self.model_buffers.get("test").unwrap();
+            render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
             render_pass.set_vertex_buffer(0, model_buffer.vertex_buffer.slice(..));
             render_pass.set_index_buffer(model_buffer.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.set_vertex_buffer(1, self.model_instances_buffer.slice(..));

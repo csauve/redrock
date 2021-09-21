@@ -24,7 +24,7 @@ impl Game {
             game.map.scenario.player_location,
             game.map.globals.player_object.clone(),
         ).unwrap();
-        
+        game.state.camera.object_attachment = game.state.player_control.target_object;
         game
     }
 

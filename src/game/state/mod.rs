@@ -16,7 +16,7 @@ mod prelude {
     #[macro_export]
     macro_rules! state_nodef {
         ($i:item) => {
-            #[derive(Copy, Clone, Default)]
+            #[derive(Copy, Clone)]
             #[repr(C)]
             $i
         };
