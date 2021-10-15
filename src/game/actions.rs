@@ -1,3 +1,5 @@
+
+#[non_exhaustive]
 pub enum PlayerAction {
     Left(bool),
     Right(bool),
@@ -5,4 +7,5 @@ pub enum PlayerAction {
     Back(bool),
     Jump(bool),
     Crouch(bool),
+    AimDelta(f32, f32),
 }

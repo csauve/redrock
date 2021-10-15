@@ -52,7 +52,7 @@ fn main() {
 
 fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) {
     for input in inputs.drain(..) {
-        dbg!(&input);
+        // dbg!(&input);
         match input {
             //W
             InputEvent::Key {code: 17, pressed} => {
@@ -69,6 +69,19 @@ fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) {
             //A
             InputEvent::Key {code: 30, pressed} => {
                 game.apply_action(PlayerAction::Left(pressed));
+            },
+            //space
+            InputEvent::Key {code: 57, pressed} => {
+                game.apply_action(PlayerAction::Jump(pressed));
+            },
+            //ctrl
+            InputEvent::Key {code: 29, pressed} => {
+                game.apply_action(PlayerAction::Crouch(pressed));
+            },
+            InputEvent::Mouse {delta: (dx, dy)} => {
+                let dx = dx / 100.0;
+                let dy = dy / 100.0;
+                game.apply_action(PlayerAction::AimDelta(dx as f32, -dy as f32 / 2.0))
             },
             _ => ()
         }

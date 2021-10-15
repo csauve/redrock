@@ -51,7 +51,7 @@ impl Renderer {
         let (device, queue) = adapter.request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                features: wgpu::Features::empty(), //NON_FILL_POLYGON_MODE?
+                features: wgpu::Features::NON_FILL_POLYGON_MODE, // ::empty(),
                 limits: wgpu::Limits::downlevel_defaults(),
             },
             None
@@ -173,7 +173,7 @@ impl Renderer {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
-                polygon_mode: wgpu::PolygonMode::Fill,
+                polygon_mode: wgpu::PolygonMode::Line,
                 clamp_depth: false,
                 conservative: false,
             },
@@ -238,7 +238,7 @@ impl Renderer {
 
 
         if let Ok(wgpu::SurfaceFrame {output, ..}) = self.surface.get_current_frame() {
-            let projection_matrix = game.state.camera.to_projection_matrix(self.config.width, self.config.height).transpose();
+            let mut camera_matrix = game.state.camera.to_camera_matrix(self.config.width, self.config.height);
 
             let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -269,7 +269,7 @@ impl Renderer {
             self.queue.write_buffer(&self.model_instances_buffer, 0 as wgpu::BufferAddress, unsafe {
                 std::slice::from_raw_parts(model_instances.as_ptr() as *const u8, std::cmp::min(MAX_INSTANCES as usize, model_instances.len()) * std::mem::size_of::<ModelInstance>())
             });
-            self.queue.write_buffer(&self.camera_buffer, 0, Renderer::bytes_slice(projection_matrix.to_slice()));
+            self.queue.write_buffer(&self.camera_buffer, 0, Renderer::bytes_slice(camera_matrix.to_slice()));
             let model_buffer = self.model_buffers.get("test").unwrap();
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
             render_pass.set_vertex_buffer(0, model_buffer.vertex_buffer.slice(..));

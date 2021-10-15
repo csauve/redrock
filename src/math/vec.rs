@@ -22,6 +22,11 @@ impl Vec3f {
     }
 
     #[inline]
+    pub fn from_slice4(slice: &[f32; 4]) -> Vec3f {
+        Vec3f::new(slice[0], slice[1], slice[2])
+    }
+
+    #[inline]
     pub fn zero() -> Vec3f {
         Vec3f::new(0.0, 0.0, 0.0)
     }

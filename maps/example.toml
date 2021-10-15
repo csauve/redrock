@@ -1,6 +1,10 @@
 [physics.biped]
 mass = 1.0
 
+[object.crate]
+physics = "biped"
+model = "box.gltf"
+
 [object.player]
 physics = "biped"
 model = "box.gltf"
@@ -12,4 +16,20 @@ player_accel = 0.01
 player_drag_scale = 0.2
 
 [scenario]
-player_location = [0.0, 0.0, 10.0]
+player_location = [0.0, 0.0, 0.0]
+
+# [[scenario.scenery]]
+# object_type = "crate"
+# position = [0.0, 0.0, 0.0]
+
+[[scenario.scenery]]
+object_type = "crate"
+position = [20.0, 0.0, 0.0]
+
+[[scenario.scenery]]
+object_type = "crate"
+position = [0.0, 15.0, 0.0]
+
+[[scenario.scenery]]
+object_type = "crate"
+position = [0.0, 0.0, 10.0]

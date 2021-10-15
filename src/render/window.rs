@@ -1,6 +1,6 @@
 use winit::{
     event_loop::{ControlFlow, EventLoop},
-    event::{Event, WindowEvent, KeyboardInput, ElementState, MouseButton},
+    event::{Event, WindowEvent, KeyboardInput, ElementState, MouseButton, DeviceEvent},
     window::WindowBuilder,
 };
 
@@ -8,6 +8,7 @@ use winit::{
 pub enum InputEvent {
     Key {code: u32, pressed: bool},
     Click {button: MouseButton, pressed: bool},
+    Mouse {delta: (f64, f64)},
 }
 
 pub struct Window {
@@ -59,6 +60,16 @@ pub fn run_event_loop(window: Window, mut game_frame: impl FnMut(&mut Vec<InputE
                         event_queue.push(InputEvent::Click {
                             button,
                             pressed: state == ElementState::Pressed
+                        });
+                    },
+                    _ => ()
+                }
+            },
+            Event::DeviceEvent {event: device_event, device_id: _} => {
+                match device_event {
+                    DeviceEvent::MouseMotion {delta} => {
+                        event_queue.push(InputEvent::Mouse {
+                            delta
                         });
                     },
                     _ => ()
