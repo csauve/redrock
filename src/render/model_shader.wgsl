@@ -4,7 +4,10 @@ struct VertexInput {
 };
 
 struct InstanceInput {
-  [[location(2)]] position: vec3<f32>;
+  [[location(2)]] model_matrix_0: vec4<f32>;
+  [[location(3)]] model_matrix_1: vec4<f32>;
+  [[location(4)]] model_matrix_2: vec4<f32>;
+  [[location(5)]] model_matrix_3: vec4<f32>;
 };
 
 struct VertexOutput {
@@ -22,8 +25,16 @@ var<uniform> camera: CameraUniform;
 [[stage(vertex)]]
 fn vertex_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
   var out: VertexOutput;
-  let pos = (vert.position + instance.position);
-  out.clip_position = camera.view_proj * vec4<f32>(pos, 1.0);
+
+  let model_matrix = mat4x4<f32>(
+    instance.model_matrix_0,
+    instance.model_matrix_1,
+    instance.model_matrix_2,
+    instance.model_matrix_3
+  );
+
+  out.clip_position = camera.view_proj * model_matrix * vec4<f32>(vert.position, 1.0);
+  
   return out;
 }
 

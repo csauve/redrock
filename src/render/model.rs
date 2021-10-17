@@ -1,31 +1,39 @@
-use crate::math::Vec3f;
+use cgmath::{Matrix4, Vector3, prelude::*};
 use std::vec::Vec;
 use gltf;
 
-#[derive(Copy, Clone, PartialEq, Debug, Default)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Vertex {
-    position: Vec3f,
-    colour: Vec3f,
+    position: Vector3<f32>,
+    colour: Vector3<f32>,
 }
 
 impl Vertex {
     pub fn at(pos: &[f32; 3]) -> Vertex {
-        Vertex {position: Vec3f::from_slice(pos), colour: Vec3f::default()}
+        Vertex {position: Vector3::new(pos[0], pos[1], pos[2]), colour: Vector3::zero()}
     }
 }
 
 //deprecated
 pub type FaceIndices = [u16; 3];
 
-#[derive(Copy, Clone, PartialEq, Debug, Default)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ModelInstance {
-    pub position: Vec3f,
+    pub transform: Matrix4<f32>,
     //todo: bone data
 }
 
-#[derive(Clone, Debug)]
+impl Default for ModelInstance {
+    fn default() -> Self {
+        ModelInstance {
+            transform: Matrix4::zero(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct Model {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u16>,

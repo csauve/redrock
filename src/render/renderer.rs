@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use wgpu;
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
+use cgmath::{prelude::*, Matrix4};
 use crate::game::Game;
-use crate::math::Mat4x4;
 use crate::render::Window;
 
 use super::model::{Vertex, FaceIndices, ModelInstance, Model};
@@ -95,11 +95,25 @@ impl Renderer {
             array_stride: std::mem::size_of::<ModelInstance>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &[
-                //position
                 wgpu::VertexAttribute {
                     offset: 0,
-                    format: wgpu::VertexFormat::Float32x3,
+                    format: wgpu::VertexFormat::Float32x4,
                     shader_location: 2,
+                },
+                wgpu::VertexAttribute {
+                    offset: 16,
+                    format: wgpu::VertexFormat::Float32x4,
+                    shader_location: 3,
+                },
+                wgpu::VertexAttribute {
+                    offset: 32,
+                    format: wgpu::VertexFormat::Float32x4,
+                    shader_location: 4,
+                },
+                wgpu::VertexAttribute {
+                    offset: 48,
+                    format: wgpu::VertexFormat::Float32x4,
+                    shader_location: 5,
                 },
             ]
         };
@@ -113,7 +127,7 @@ impl Renderer {
         let camera_buffer = Renderer::create_buffer(
             &device,
             wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            Mat4x4::default().to_slice()
+            &[Matrix4::<f32>::zero()]
         );
 
         let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -263,19 +277,19 @@ impl Renderer {
             render_pass.set_pipeline(&self.model_pipeline);
             let model_instances: Vec<ModelInstance> = game.state.objects.iter()
                 .map(|(_id, object)| ModelInstance {
-                    position: object.position,
+                    transform: object.to_transform_matrix(),
                 })
                 .collect();
-            self.queue.write_buffer(&self.model_instances_buffer, 0 as wgpu::BufferAddress, unsafe {
+            self.queue.write_buffer(&self.model_instances_buffer, 0, unsafe {
                 std::slice::from_raw_parts(model_instances.as_ptr() as *const u8, std::cmp::min(MAX_INSTANCES as usize, model_instances.len()) * std::mem::size_of::<ModelInstance>())
             });
-            self.queue.write_buffer(&self.camera_buffer, 0, Renderer::bytes_slice(camera_matrix.to_slice()));
+            self.queue.write_buffer(&self.camera_buffer, 0, Renderer::bytes_slice(&[camera_matrix]));
             let model_buffer = self.model_buffers.get("test").unwrap();
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
             render_pass.set_vertex_buffer(0, model_buffer.vertex_buffer.slice(..));
             render_pass.set_index_buffer(model_buffer.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.set_vertex_buffer(1, self.model_instances_buffer.slice(..));
-            render_pass.draw_indexed(0..model_buffer.face_count, 0, 0..(model_instances.len() as u32));
+            render_pass.draw_indexed(0..model_buffer.face_count, 0, 0..(std::cmp::min(MAX_INSTANCES as usize, model_instances.len()) as u32));
             
             drop(render_pass);
             self.queue.submit(std::iter::once(encoder.finish()));

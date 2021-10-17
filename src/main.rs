@@ -9,7 +9,6 @@ mod render;
 
 use std::time::{Duration, SystemTime};
 use game::{Game, actions::PlayerAction};
-use math::Vec3f;
 use render::{Window, run_event_loop, InputEvent, Renderer};
 use pollster;
 
@@ -81,7 +80,7 @@ fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) {
             InputEvent::Mouse {delta: (dx, dy)} => {
                 let dx = dx / 100.0;
                 let dy = dy / 100.0;
-                game.apply_action(PlayerAction::AimDelta(dx as f32, -dy as f32 / 2.0))
+                game.apply_action(PlayerAction::AimDelta(dx as f32, dy as f32 / 2.0))
             },
             _ => ()
         }

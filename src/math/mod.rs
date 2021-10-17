@@ -1,14 +1,8 @@
 mod vec;
-mod geo;
-mod matrix;
-mod quaternion;
-mod euler;
 
-pub use vec::*;
-pub use geo::*;
-pub use matrix::*;
-pub use quaternion::*;
-pub use euler::*;
+// pub use vec::*;
+// pub use matrix::*;
+// pub use euler::*;
 
 pub const TAU: f32 = std::f32::consts::TAU;
 pub const PI: f32 = std::f32::consts::PI;

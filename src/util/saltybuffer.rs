@@ -131,7 +131,6 @@ impl<T: Copy + Default, const N: usize> SaltyBuffer<T, { N }> {
 
 mod tests {
     use super::*;
-    use crate::math::Vec3f;
 
     #[derive(Copy, Clone, Default)]
     #[repr(C)]

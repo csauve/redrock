@@ -1,8 +1,16 @@
-use crate::math::Vec3f;
+use cgmath::{prelude::*, Vector3, Quaternion};
 use super::prelude::*;
 
-state! {
+state_nodef! {
     pub struct PhysicsState {
-        pub velocity: Vec3f,
+        pub velocity: Vector3<f32>,
+    }
+}
+
+impl Default for PhysicsState {
+    fn default() -> Self {
+        PhysicsState {
+            velocity: Vector3::zero(),
+        }
     }
 }
