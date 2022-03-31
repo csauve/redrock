@@ -78,8 +78,8 @@ fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) {
                 game.apply_action(PlayerAction::Crouch(pressed));
             },
             InputEvent::Mouse {delta: (dx, dy)} => {
-                let dx = dx / 100.0;
-                let dy = dy / 100.0;
+                let dx = dx / 300.0;
+                let dy = dy / 300.0;
                 game.apply_action(PlayerAction::AimDelta(dx as f32, dy as f32 / 2.0))
             },
             _ => ()

@@ -1,3 +1,5 @@
+use crate::game::tags::Map;
+
 use super::prelude::*;
 use cgmath::{prelude::*, Matrix4, Vector3, Point3, Quaternion, PerspectiveFov, Rad};
 
@@ -26,6 +28,12 @@ impl Default for CameraState {
 }
 
 impl CameraState {
+    pub fn init(map: &Map) -> CameraState {
+        let mut camera = CameraState::default();
+        camera.v_fov = map.globals.v_fov_as_radians();
+        camera
+    }
+
     pub fn to_camera_matrix(&self, width: u32, height: u32) -> Matrix4<f32> {
         let proj: Matrix4<f32> = PerspectiveFov::<f32> {
             fovy: Rad::<f32>(self.v_fov),

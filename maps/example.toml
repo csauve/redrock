@@ -2,11 +2,11 @@
 mass = 1.0
 
 [object.crate]
-physics = "biped"
+physics_tag_id = "biped"
 model = "box.gltf"
 
 [object.player]
-physics = "biped"
+physics_tag_id = "biped"
 model = "box.gltf"
 
 [globals]

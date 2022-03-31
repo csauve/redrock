@@ -5,6 +5,8 @@ pub struct SaltyId {
     index: u16,
 }
 
+pub const NONE: SaltyId = SaltyId {salt: 0, index: 0};
+
 impl SaltyId {
     pub const fn new(salt: u16, index: u16) -> SaltyId {
         SaltyId {salt, index}
@@ -13,9 +15,11 @@ impl SaltyId {
     pub fn is_some(&self) -> bool {
         self.salt != 0
     }
-}
 
-pub const NONE: SaltyId = SaltyId::new(0, 0);
+    pub fn none() -> SaltyId {
+        NONE
+    }
+}
 
 impl Default for SaltyId {
     fn default() -> SaltyId {
