@@ -27,7 +27,7 @@ fn main() {
     let mut window = Window::new(WINDOW_TITLE);
     let mut renderer = pollster::block_on(Renderer::new(&window));
 
-    run_event_loop(window, move |mut inputs, resize| {
+    run_event_loop(window, move |mut inputs, resize| -> bool {
         let curr_time = SystemTime::now();
         if let Ok(elapsed) = curr_time.duration_since(prev_time) {
             accum_nanos += elapsed.as_nanos();
@@ -43,38 +43,45 @@ fn main() {
 
             renderer.render(&game);
 
-            handle_inputs(&mut game, &mut inputs);
+            let keep_running = handle_inputs(&mut game, &mut inputs);
             prev_time = curr_time;
+            return keep_running
         }
+        true
     });
 }
 
-fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) {
+fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) -> bool {
     for input in inputs.drain(..) {
-        // dbg!(&input);
         match input {
+            //Esc
+            InputEvent::Key {code: 53, pressed} => {
+                if !pressed {
+                    return false;
+                }
+            },
             //W
-            InputEvent::Key {code: 17, pressed} => {
+            InputEvent::Key {code: 13, pressed} => {
                 game.apply_action(PlayerAction::Forward(pressed));
             },
             //S
-            InputEvent::Key {code: 31, pressed} => {
+            InputEvent::Key {code: 1, pressed} => {
                 game.apply_action(PlayerAction::Back(pressed));
             },
             //D
-            InputEvent::Key {code: 32, pressed} => {
+            InputEvent::Key {code: 2, pressed} => {
                 game.apply_action(PlayerAction::Right(pressed));
             },
             //A
-            InputEvent::Key {code: 30, pressed} => {
+            InputEvent::Key {code: 0, pressed} => {
                 game.apply_action(PlayerAction::Left(pressed));
             },
             //space
-            InputEvent::Key {code: 57, pressed} => {
+            InputEvent::Key {code: 49, pressed} => {
                 game.apply_action(PlayerAction::Jump(pressed));
             },
             //ctrl
-            InputEvent::Key {code: 29, pressed} => {
+            InputEvent::Key {code: 59, pressed} => {
                 game.apply_action(PlayerAction::Crouch(pressed));
             },
             InputEvent::Mouse {delta: (dx, dy)} => {
@@ -82,7 +89,10 @@ fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) {
                 let dy = dy / 300.0;
                 game.apply_action(PlayerAction::AimDelta(dx as f32, dy as f32 / 2.0))
             },
-            _ => ()
+            _ => {
+                dbg!(&input);
+            }
         }
     }
+    true
 }

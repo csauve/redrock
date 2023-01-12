@@ -21,7 +21,7 @@ pub type TagId = TagString;
 
 impl Into<String> for TagString {
     fn into(self) -> String {
-        String::from_utf8((self.0).iter().map(|c| *c).collect()).expect("msg: &str")
+        String::from_utf8((self.0).iter().filter(|c| **c != 0u8).map(|c| *c).collect()).expect("msg: &str")
     }
 }
 

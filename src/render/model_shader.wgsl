@@ -1,6 +1,6 @@
 struct VertexInput {
   [[location(0)]] position: vec3<f32>;
-  [[location(1)]] colour: vec3<f32>;
+  [[location(1)]] normal: vec3<f32>;
 };
 
 struct InstanceInput {
@@ -8,10 +8,13 @@ struct InstanceInput {
   [[location(3)]] model_matrix_1: vec4<f32>;
   [[location(4)]] model_matrix_2: vec4<f32>;
   [[location(5)]] model_matrix_3: vec4<f32>;
+  [[location(6)]] colour: vec3<f32>;
 };
 
 struct VertexOutput {
   [[builtin(position)]] clip_position: vec4<f32>;
+  [[location(0)]] normal: vec3<f32>;
+  [[location(1)]] instance_colour: vec4<f32>;
 };
 
 [[block]]
@@ -34,11 +37,14 @@ fn vertex_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
   );
 
   out.clip_position = camera.view_proj * model_matrix * vec4<f32>(vert.position, 1.0);
-  
+  out.normal = vert.normal;
+  out.instance_colour = vec4<f32>(instance.colour, 1.0);
   return out;
 }
 
 [[stage(fragment)]]
 fn fragment_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+  // let z = in.clip_position.z / 10.0;
+  let nl: f32 = clamp(dot(in.normal, vec3<f32>(0.0, 1.0, 0.0)), 0.0, 1.0);
+  return in.instance_colour * clamp(nl + 0.1, 0.0, 1.0);
 }

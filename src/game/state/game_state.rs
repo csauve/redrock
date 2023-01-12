@@ -65,7 +65,10 @@ impl GameState {
 
                 physics_state.velocity += movement_vec * map.globals.player_accel;
 
-                let drag = map.globals.player_drag_scale * (physics_state.velocity.magnitude() + physics_state.velocity.magnitude2());
+                let drag = map.globals.player_drag_scale * (
+                    physics_state.velocity.magnitude() +
+                    physics_state.velocity.magnitude2()
+                );
                 if physics_state.velocity.magnitude2() != 0.0 {
                     physics_state.velocity -= physics_state.velocity.normalize_to(drag);
                 }

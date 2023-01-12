@@ -33,7 +33,7 @@ impl Window {
 }
 
 // todo: framerate limit: https://github.com/gfx-rs/wgpu/blob/master/wgpu/examples/framework.rs
-pub fn run_event_loop(window: Window, mut game_frame: impl FnMut(&mut Vec<InputEvent>, Option<(u32, u32)>) + 'static) {
+pub fn run_event_loop(window: Window, mut game_frame: impl FnMut(&mut Vec<InputEvent>, Option<(u32, u32)>) -> bool + 'static) {
     let mut event_queue = Vec::<InputEvent>::new();
     let mut resize: Option<(u32, u32)> = None;
     window.event_loop.run(move |event, _, control_flow| {
@@ -76,7 +76,9 @@ pub fn run_event_loop(window: Window, mut game_frame: impl FnMut(&mut Vec<InputE
                 }
             },
             Event::MainEventsCleared => {
-                game_frame(&mut event_queue, resize);
+                if !game_frame(&mut event_queue, resize) {
+                    *control_flow = ControlFlow::Exit;
+                }
                 resize = None;
             },
             _ => ()

@@ -6,22 +6,23 @@ use gltf;
 #[repr(C)]
 pub struct Vertex {
     position: Vector3<f32>,
-    colour: Vector3<f32>,
+    normal: Vector3<f32>,
 }
 
 impl Vertex {
-    pub fn at(pos: &[f32; 3]) -> Vertex {
-        Vertex {position: Vector3::new(pos[0], pos[1], pos[2]), colour: Vector3::zero()}
+    pub fn new(pos: &[f32; 3], normal: &[f32; 3]) -> Vertex {
+        Vertex {position: Vector3::new(pos[0], pos[1], pos[2]), normal: Vector3::new(normal[0], normal[1], normal[2])}
     }
 }
 
 //deprecated
 pub type FaceIndices = [u16; 3];
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct ModelInstance {
     pub transform: Matrix4<f32>,
+    pub colour: Vector3<f32>,
     //todo: bone data
 }
 
@@ -29,6 +30,7 @@ impl Default for ModelInstance {
     fn default() -> Self {
         ModelInstance {
             transform: Matrix4::zero(),
+            colour: Vector3::unit_x(),
         }
     }
 }
@@ -49,7 +51,14 @@ impl Model {
                     for primitive in mesh.primitives() {
                         let primitive_reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
                         let vertices: Vec<Vertex> = if let Some(vertices_reader) = primitive_reader.read_positions() {
-                            vertices_reader.map(|v| Vertex::at(&v)).collect()
+                            if let Some(normals_reader) = primitive_reader.read_normals() {
+                                normals_reader
+                                    .zip(vertices_reader)
+                                    .map(|(n, v)| Vertex::new(&v, &n))
+                                    .collect()
+                            } else {
+                                return Err(format!("Model error in {}: mesh has no normals", path));
+                            }
                         } else {
                             return Err(format!("Model error in {}: mesh has no vertices", path));
                         };

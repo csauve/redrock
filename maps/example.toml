@@ -1,13 +1,19 @@
 [physics.biped]
 mass = 1.0
 
+[object.tree]
+model = "maps/tree.gltf"
+colour = [0.0, 1.0, 0.0]
+
 [object.crate]
-physics_tag_id = "biped"
-model = "box.gltf"
+physics = "biped"
+model = "maps/cube.gltf"
+colour = [0.0, 0.0, 1.0]
 
 [object.player]
-physics_tag_id = "biped"
-model = "box.gltf"
+physics = "biped"
+model = "maps/cube.gltf"
+colour = [1.0, 0.0, 0.0]
 
 [globals]
 gravity_scale = 1.0
@@ -19,15 +25,11 @@ player_drag_scale = 0.2
 player_location = {pos = [0.0, 0.0, 0.0]}
 
 [[scenario.scenery]]
-object_type = "crate"
-position = {pos = [0.0, 0.0, 0.0], rot = [45.0, 1.0, 10.0]}
-
-[[scenario.scenery]]
-object_type = "crate"
+object_type = "tree"
 position = {pos = [20.0, 0.0, 0.0]}
 
 [[scenario.scenery]]
-object_type = "crate"
+object_type = "tree"
 position = {pos = [15.0, 0.0, 0.0]}
 
 [[scenario.scenery]]
