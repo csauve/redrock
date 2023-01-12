@@ -45,6 +45,7 @@ fn vertex_main(vert: VertexInput, instance: InstanceInput) -> VertexOutput {
 [[stage(fragment)]]
 fn fragment_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
   // let z = in.clip_position.z / 10.0;
-  let nl: f32 = clamp(dot(in.normal, vec3<f32>(0.0, 1.0, 0.0)), 0.0, 1.0);
+  let l = normalize(vec3<f32>(0.1, 0.5, 1.0));
+  let nl: f32 = clamp(dot(in.normal, l), 0.0, 1.0);
   return in.instance_colour * clamp(nl + 0.1, 0.0, 1.0);
 }

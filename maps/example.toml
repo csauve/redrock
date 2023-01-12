@@ -5,6 +5,10 @@ mass = 1.0
 model = "maps/tree.gltf"
 colour = [0.0, 1.0, 0.0]
 
+[object.axis]
+model = "maps/axis.gltf"
+colour = [1.0, 1.0, 1.0]
+
 [object.crate]
 physics = "biped"
 model = "maps/cube.gltf"
@@ -22,7 +26,11 @@ player_accel = 0.01
 player_drag_scale = 0.2
 
 [scenario]
-player_location = {pos = [0.0, 0.0, 0.0]}
+player_location = {pos = [-5.0, 0.0, 0.0]}
+
+[[scenario.scenery]]
+object_type = "axis"
+position = {pos = [0.0, 0.0, 0.0]}
 
 [[scenario.scenery]]
 object_type = "tree"

@@ -6,10 +6,12 @@ mod game;
 mod math;
 mod util;
 mod render;
+mod input;
 
-use std::time::{Duration, SystemTime};
+use std::time::{SystemTime};
 use game::{Game, actions::PlayerAction};
-use render::{Window, run_event_loop, InputEvent, Renderer};
+use input::InputMappings;
+use render::{Window, run_event_loop, Renderer};
 use pollster;
 
 const WINDOW_TITLE: &str = "redrock";
@@ -20,6 +22,7 @@ const TICK_DURATION_SEC: f32 = 1.0 / TICK_RATE as f32;
 
 fn main() {
     let mut game = Game::load_map("maps/example.toml");
+    let input_mappings = InputMappings::load("controls.toml");
 
     let mut prev_time = SystemTime::now();
     let mut accum_nanos: u128 = 0;
@@ -43,56 +46,20 @@ fn main() {
 
             renderer.render(&game);
 
-            let keep_running = handle_inputs(&mut game, &mut inputs);
+            for input in inputs.drain(..) {
+                match input_mappings.map_to_action(input) {
+                    Some(PlayerAction::Quit) => {
+                        return false;
+                    },
+                    Some(action) => {
+                        game.apply_action(action);
+                    },
+                    None => {}
+                }
+            }
             prev_time = curr_time;
-            return keep_running
+            return true;
         }
         true
     });
-}
-
-fn handle_inputs(game: &mut Game, inputs: &mut Vec<InputEvent>) -> bool {
-    for input in inputs.drain(..) {
-        match input {
-            //Esc
-            InputEvent::Key {code: 53, pressed} => {
-                if !pressed {
-                    return false;
-                }
-            },
-            //W
-            InputEvent::Key {code: 13, pressed} => {
-                game.apply_action(PlayerAction::Forward(pressed));
-            },
-            //S
-            InputEvent::Key {code: 1, pressed} => {
-                game.apply_action(PlayerAction::Back(pressed));
-            },
-            //D
-            InputEvent::Key {code: 2, pressed} => {
-                game.apply_action(PlayerAction::Right(pressed));
-            },
-            //A
-            InputEvent::Key {code: 0, pressed} => {
-                game.apply_action(PlayerAction::Left(pressed));
-            },
-            //space
-            InputEvent::Key {code: 49, pressed} => {
-                game.apply_action(PlayerAction::Jump(pressed));
-            },
-            //ctrl
-            InputEvent::Key {code: 59, pressed} => {
-                game.apply_action(PlayerAction::Crouch(pressed));
-            },
-            InputEvent::Mouse {delta: (dx, dy)} => {
-                let dx = dx / 300.0;
-                let dy = dy / 300.0;
-                game.apply_action(PlayerAction::AimDelta(dx as f32, dy as f32 / 2.0))
-            },
-            _ => {
-                dbg!(&input);
-            }
-        }
-    }
-    true
 }

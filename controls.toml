@@ -1,0 +1,7 @@
+[controls]
+W = "Forward"
+S = "Back"
+A = "Left"
+D = "Right"
+Space = "Jump"
+LControl = "Crouch"

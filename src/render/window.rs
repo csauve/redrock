@@ -1,15 +1,9 @@
+use crate::input::InputEvent;
 use winit::{
     event_loop::{ControlFlow, EventLoop},
-    event::{Event, WindowEvent, KeyboardInput, ElementState, MouseButton, DeviceEvent},
+    event::{Event, WindowEvent, KeyboardInput, VirtualKeyCode, ElementState, DeviceEvent},
     window::WindowBuilder,
 };
-
-#[derive(Debug)]
-pub enum InputEvent {
-    Key {code: u32, pressed: bool},
-    Click {button: MouseButton, pressed: bool},
-    Mouse {delta: (f64, f64)},
-}
 
 pub struct Window {
     pub window: winit::window::Window,
@@ -53,6 +47,7 @@ pub fn run_event_loop(window: Window, mut game_frame: impl FnMut(&mut Vec<InputE
                     WindowEvent::KeyboardInput {input, device_id: _, is_synthetic: _} => {
                         event_queue.push(InputEvent::Key {
                             code: input.scancode,
+                            key: input.virtual_keycode,
                             pressed: input.state == ElementState::Pressed
                         });
                     },

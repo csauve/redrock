@@ -2,12 +2,9 @@ pub mod tags;
 pub mod actions;
 pub mod state;
 
-use crate::util::saltybuffer::{SaltyId, NONE};
 use state::game_state::GameState;
-use tags::{Map, TagId, Placement};
+use tags::{Map, Placement};
 use actions::PlayerAction;
-
-use self::state::player_control;
 
 pub struct Game {
     pub map: Map,

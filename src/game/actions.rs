@@ -8,4 +8,5 @@ pub enum PlayerAction {
     Jump(bool),
     Crouch(bool),
     AimDelta(f32, f32),
+    Quit,
 }

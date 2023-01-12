@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use gltf::json::texture;
 use wgpu;
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
 use cgmath::{prelude::*, Matrix4, Vector3};
@@ -17,9 +18,16 @@ struct ModelBuffers {
     face_count: u32,
 }
 
+struct Texture {
+    texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    sampler: wgpu::Sampler,
+}
+
 pub struct Renderer {
     instance: wgpu::Instance,
     surface: wgpu::Surface,
+    zbuffer: Texture,
     adapter: wgpu::Adapter,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -199,7 +207,13 @@ impl Renderer {
                 clamp_depth: false,
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState {
                 count: 1,
                 mask: !0,
@@ -207,9 +221,12 @@ impl Renderer {
             }
         });
 
+        let zbuffer = Renderer::create_zbuffer_texture(&device, config.width, config.height);
+
         Renderer {
             instance,
             surface,
+            zbuffer,
             adapter,
             device,
             queue,
@@ -228,6 +245,41 @@ impl Renderer {
         self.config.width = std::cmp::max(1, width);
         self.config.height = std::cmp::max(1, height);
         self.surface.configure(&self.device, &self.config);
+        self.zbuffer = Renderer::create_zbuffer_texture(&self.device, self.config.width, self.config.height);
+    }
+
+    fn create_zbuffer_texture(device: &wgpu::Device, width: u32, height: u32) -> Texture {
+        let descriptor = wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth32Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        };
+        let texture = device.create_texture(&descriptor);
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            compare: Some(wgpu::CompareFunction::LessEqual),
+            lod_min_clamp: -100.0,
+            lod_max_clamp: 100.0,
+            ..Default::default()
+        });
+        Texture {
+            texture,
+            view,
+            sampler,
+        }
     }
 
     fn create_buffer<T>(device: &wgpu::Device, usage: wgpu::BufferUsages, contents: &[T]) -> wgpu::Buffer {
@@ -295,7 +347,14 @@ impl Renderer {
                         store: true,
                     }
                 }],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.zbuffer.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
+                    }),
+                    stencil_ops: None,
+                }),
             });
 
             //render models
