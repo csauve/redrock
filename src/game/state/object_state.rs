@@ -1,4 +1,4 @@
-use cgmath::{prelude::*, Vector3, Quaternion, Matrix4};
+use cgmath::{prelude::*, Vector3, Quaternion, Matrix3, Matrix4};
 use super::prelude::*;
 use super::physics_state::PhysicsState;
 use crate::game::tags::{Map, Object};
@@ -54,5 +54,9 @@ impl ObjectState {
 
     pub fn to_transform_matrix(&self) -> Matrix4<f32> {
         Matrix4::from_translation(self.position) * Matrix4::from(self.rotation)
+    }
+
+    pub fn to_rotation_matrix(&self) -> Matrix3<f32> {
+        Matrix3::from(self.rotation)
     }
 }

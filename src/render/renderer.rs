@@ -3,13 +3,30 @@ use std::collections::HashMap;
 use gltf::json::texture;
 use wgpu;
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
-use cgmath::{prelude::*, Matrix4, Vector3};
+use cgmath::{prelude::*, Matrix4, Vector3, Vector4};
 use crate::game::Game;
 use crate::render::Window;
 
 use super::model::{Vertex, FaceIndices, ModelInstance, Model};
 
 const MAX_INSTANCES: usize = 128;
+
+//std140
+#[derive(Copy, Clone)]
+#[repr(C, align(4))]
+struct GpuFloat(f32);
+
+#[derive(Copy, Clone)]
+#[repr(C, align(16))]
+struct GpuVec3(Vector3<f32>);
+
+#[derive(Copy, Clone)]
+#[repr(C, align(16))]
+struct GpuVec4(Vector4<f32>);
+
+#[derive(Copy, Clone)]
+#[repr(C, align(64))]
+struct GpuMat4(Matrix4<f32>);
 
 struct ModelBuffers {
     vertex_buffer: wgpu::Buffer,
@@ -24,6 +41,44 @@ struct Texture {
     sampler: wgpu::Sampler,
 }
 
+#[derive(Copy, Clone)]
+#[repr(C, align(16))]
+struct CameraUniform {
+    view_proj: GpuMat4,
+    world_position: GpuVec3,
+}
+
+impl Default for CameraUniform {
+    fn default() -> CameraUniform {
+        CameraUniform {
+            view_proj: GpuMat4(Matrix4::<f32>::one()),
+            world_position: GpuVec3(Vector3::<f32>::zero()),
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C, align(16))]
+struct EnvironmentUniform {
+    fog_colour: GpuVec4,
+    fog_min_distance: GpuFloat,
+    fog_max_distance: GpuFloat,
+    sun_colour: GpuVec3,
+    sun_direction: GpuVec3,
+}
+
+impl Default for EnvironmentUniform {
+    fn default() -> EnvironmentUniform {
+        EnvironmentUniform {
+            fog_colour: GpuVec4(Vector4::new(0.2, 0.2, 0.8, 0.8)),
+            fog_min_distance: GpuFloat(1.0),
+            fog_max_distance: GpuFloat(25.0),
+            sun_colour: GpuVec3(Vector3::new(0.8, 0.8, 0.5)),
+            sun_direction: GpuVec3(Vector3::new(0.1, 0.5, 1.0).normalize()),
+        }
+    }
+}
+
 pub struct Renderer {
     instance: wgpu::Instance,
     surface: wgpu::Surface,
@@ -34,7 +89,8 @@ pub struct Renderer {
     config: wgpu::SurfaceConfiguration,
 
     camera_buffer: wgpu::Buffer,
-    camera_bind_group: wgpu::BindGroup,
+    environment_buffer: wgpu::Buffer,
+    bind_group: wgpu::BindGroup,
 
     model_pipeline: wgpu::RenderPipeline,
     models: HashMap<String, ModelBuffers>,
@@ -50,6 +106,7 @@ impl Renderer {
         let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
+            force_fallback_adapter: false,
         }).await.expect("Failed to find adapter");
 
         println!("Found adapter {}", adapter.get_info().name);
@@ -65,21 +122,21 @@ impl Renderer {
             },
             None
         ).await.expect("Failed to request device");
+        device.on_uncaptured_error(|err| {
+            dbg!(err);
+        });
 
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_preferred_format(&adapter).unwrap(),
+            format: surface.get_supported_formats(&adapter)[0],
             width: window.window.inner_size().width,
             height: window.window.inner_size().height,
             present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
         surface.configure(&device, &config);
 
-
-        let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: None,
-            source: wgpu::ShaderSource::Wgsl(include_str!("model_shader.wgsl").into()),
-        });
+        let shader = device.create_shader_module(wgpu::include_wgsl!("model_shader.wgsl"));
 
         let vert_buffer_layout = wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
@@ -97,6 +154,24 @@ impl Renderer {
                     format: wgpu::VertexFormat::Float32x3,
                     shader_location: 1,
                 },
+                //tangent
+                wgpu::VertexAttribute {
+                    offset: 24 as wgpu::BufferAddress,
+                    format: wgpu::VertexFormat::Float32x3,
+                    shader_location: 2,
+                },
+                //bitangent
+                wgpu::VertexAttribute {
+                    offset: 36 as wgpu::BufferAddress,
+                    format: wgpu::VertexFormat::Float32x3,
+                    shader_location: 3,
+                },
+                //uv
+                wgpu::VertexAttribute {
+                    offset: 48 as wgpu::BufferAddress,
+                    format: wgpu::VertexFormat::Float32x2,
+                    shader_location: 4,
+                },
             ]
         };
 
@@ -104,32 +179,48 @@ impl Renderer {
             array_stride: std::mem::size_of::<ModelInstance>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &[
-                //transform
+                //transform matrix
                 wgpu::VertexAttribute {
                     offset: 0,
                     format: wgpu::VertexFormat::Float32x4,
-                    shader_location: 2,
+                    shader_location: 5,
                 },
                 wgpu::VertexAttribute {
                     offset: 16,
                     format: wgpu::VertexFormat::Float32x4,
-                    shader_location: 3,
+                    shader_location: 6,
                 },
                 wgpu::VertexAttribute {
                     offset: 32,
                     format: wgpu::VertexFormat::Float32x4,
-                    shader_location: 4,
+                    shader_location: 7,
                 },
                 wgpu::VertexAttribute {
                     offset: 48,
                     format: wgpu::VertexFormat::Float32x4,
-                    shader_location: 5,
+                    shader_location: 8,
                 },
-                //colour
+                //normal matrix
                 wgpu::VertexAttribute {
                     offset: 64,
                     format: wgpu::VertexFormat::Float32x3,
-                    shader_location: 6,
+                    shader_location: 9,
+                },
+                wgpu::VertexAttribute {
+                    offset: 76,
+                    format: wgpu::VertexFormat::Float32x3,
+                    shader_location: 10,
+                },
+                wgpu::VertexAttribute {
+                    offset: 88,
+                    format: wgpu::VertexFormat::Float32x3,
+                    shader_location: 11,
+                },
+                //colour
+                wgpu::VertexAttribute {
+                    offset: 100,
+                    format: wgpu::VertexFormat::Float32x3,
+                    shader_location: 12,
                 },
             ]
         };
@@ -140,18 +231,34 @@ impl Renderer {
             &[ModelInstance::default(); MAX_INSTANCES]
         );
 
+        let environment_buffer = Renderer::create_buffer(
+            &device,
+            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            &[EnvironmentUniform::default()]
+        );
+
         let camera_buffer = Renderer::create_buffer(
             &device,
             wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            &[Matrix4::<f32>::zero()]
+            &[CameraUniform::default()]
         );
 
-        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -162,21 +269,25 @@ impl Renderer {
             ],
         });
 
-        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
-            layout: &&camera_bind_group_layout,
+            layout: &bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
                     resource: camera_buffer.as_entire_binding(),
-                }
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: environment_buffer.as_entire_binding(),
+                },
             ]
         });
         
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor  {
             label: None,
             bind_group_layouts: &[
-                &camera_bind_group_layout
+                &bind_group_layout
             ],
             push_constant_ranges: &[],
         });
@@ -192,11 +303,11 @@ impl Renderer {
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: "fragment_main",
-                targets: &[wgpu::ColorTargetState {
+                targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
-                }]
+                })]
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
@@ -204,7 +315,7 @@ impl Renderer {
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
                 polygon_mode: wgpu::PolygonMode::Fill,
-                clamp_depth: false,
+                unclipped_depth: false,
                 conservative: false,
             },
             depth_stencil: Some(wgpu::DepthStencilState {
@@ -218,7 +329,8 @@ impl Renderer {
                 count: 1,
                 mask: !0,
                 alpha_to_coverage_enabled: false,
-            }
+            },
+            multiview: None,
         });
 
         let zbuffer = Renderer::create_zbuffer_texture(&device, config.width, config.height);
@@ -233,7 +345,8 @@ impl Renderer {
             config,
 
             camera_buffer,
-            camera_bind_group,
+            environment_buffer,
+            bind_group,
 
             model_pipeline,
             models: HashMap::new(),
@@ -311,17 +424,25 @@ impl Renderer {
     }
 
     pub fn render(&mut self, game: &Game) {
-        if let Ok(wgpu::SurfaceFrame {output, ..}) = self.surface.get_current_frame() {
+        if let Ok(output) = self.surface.get_current_texture() {
+            let output_view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
             //load camera buffer
-            let mut camera_matrix = game.state.camera.to_camera_matrix(self.config.width, self.config.height);
-            self.queue.write_buffer(&self.camera_buffer, 0, Renderer::bytes_slice(&[camera_matrix]));
+            let camera_uniform = CameraUniform {
+                view_proj: GpuMat4(game.state.camera.to_camera_matrix(self.config.width, self.config.height)),
+                world_position: GpuVec3(game.state.camera.position),
+            };
+            self.queue.write_buffer(&self.camera_buffer, 0, Renderer::bytes_slice(&[camera_uniform]));
+            let environment_uniform = EnvironmentUniform::default();
+            self.queue.write_buffer(&self.environment_buffer, 0, Renderer::bytes_slice(&[environment_uniform]));
             
             //load model buffers
             let mut model_instances: HashMap<String, Vec<ModelInstance>> = HashMap::new();
             for (_id, object_state) in game.state.objects.iter() {
                 if let Some(object_tag) = game.map.object.get(&object_state.tag) {
                     let instance = ModelInstance {
-                        transform: object_state.to_transform_matrix(),
+                        transform_matrix: object_state.to_transform_matrix(),
+                        normal_matrix: object_state.to_rotation_matrix(),
                         colour: Vector3::new(object_tag.colour[0], object_tag.colour[1], object_tag.colour[2]),
                     };
                     let model_path: String = object_tag.model.into();
@@ -333,20 +454,24 @@ impl Renderer {
                 }
             }
 
-            let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
             let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: None,
             });
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
-                color_attachments: &[wgpu::RenderPassColorAttachment {
-                    view: &view,
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &output_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: environment_uniform.fog_colour.0.x as f64,
+                            g: environment_uniform.fog_colour.0.y as f64,
+                            b: environment_uniform.fog_colour.0.z as f64,
+                            a: 1.0,
+                        }),
                         store: true,
                     }
-                }],
+                })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &self.zbuffer.view,
                     depth_ops: Some(wgpu::Operations {
@@ -360,7 +485,7 @@ impl Renderer {
             //render models
             let mut instances_total: usize = 0;
             render_pass.set_pipeline(&self.model_pipeline);
-            render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+            render_pass.set_bind_group(0, &self.bind_group, &[]);
             for (model_path, instances) in model_instances.iter() {
                 let start_index = instances_total;
                 let instances_remaining = MAX_INSTANCES - instances_total;
@@ -387,6 +512,7 @@ impl Renderer {
 
             drop(render_pass);
             self.queue.submit(std::iter::once(encoder.finish()));
+            output.present();
         }
     }
 }

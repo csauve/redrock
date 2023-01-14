@@ -34,7 +34,7 @@ position = {pos = [0.0, 0.0, 0.0]}
 
 [[scenario.scenery]]
 object_type = "tree"
-position = {pos = [20.0, 0.0, 0.0]}
+position = {pos = [20.0, 0.0, 0.0], rot = [0.0, 0.0, -90.0]}
 
 [[scenario.scenery]]
 object_type = "tree"

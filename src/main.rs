@@ -13,6 +13,7 @@ use game::{Game, actions::PlayerAction};
 use input::InputMappings;
 use render::{Window, run_event_loop, Renderer};
 use pollster;
+use env_logger;
 
 const WINDOW_TITLE: &str = "redrock";
 const TICK_RATE: u32 = 120;
@@ -21,6 +22,7 @@ const TICK_DURATION_SEC: f32 = 1.0 / TICK_RATE as f32;
 // const MAX_TICKS_PER_FRAME: u32 = 10; //todo: prevent spiral of death
 
 fn main() {
+    // env_logger::init();
     let mut game = Game::load_map("maps/example.toml");
     let input_mappings = InputMappings::load("controls.toml");
 

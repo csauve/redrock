@@ -1,4 +1,4 @@
-use cgmath::{Matrix4, Vector3, prelude::*};
+use cgmath::{Matrix4, Matrix3, Vector3, Vector2, prelude::*};
 use std::vec::Vec;
 use gltf;
 
@@ -7,11 +7,20 @@ use gltf;
 pub struct Vertex {
     position: Vector3<f32>,
     normal: Vector3<f32>,
+    tangent: Vector3<f32>,
+    bitangent: Vector3<f32>,
+    uv: Vector2<f32>,
 }
 
 impl Vertex {
-    pub fn new(pos: &[f32; 3], normal: &[f32; 3]) -> Vertex {
-        Vertex {position: Vector3::new(pos[0], pos[1], pos[2]), normal: Vector3::new(normal[0], normal[1], normal[2])}
+    pub fn new(position: Vector3<f32>, normal: Vector3<f32>, tangent: Vector3<f32>, bitangent: Vector3<f32>, uv: Vector2<f32>) -> Vertex {
+        Vertex {
+            position,
+            normal,
+            tangent,
+            bitangent,
+            uv,
+        }
     }
 }
 
@@ -21,7 +30,8 @@ pub type FaceIndices = [u16; 3];
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct ModelInstance {
-    pub transform: Matrix4<f32>,
+    pub transform_matrix: Matrix4<f32>,
+    pub normal_matrix: Matrix3<f32>,
     pub colour: Vector3<f32>,
     //todo: bone data
 }
@@ -29,7 +39,8 @@ pub struct ModelInstance {
 impl Default for ModelInstance {
     fn default() -> Self {
         ModelInstance {
-            transform: Matrix4::zero(),
+            transform_matrix: Matrix4::one(),
+            normal_matrix: Matrix3::one(),
             colour: Vector3::unit_x(),
         }
     }
@@ -50,17 +61,61 @@ impl Model {
                     let mesh = root_node.mesh().unwrap();
                     for primitive in mesh.primitives() {
                         let primitive_reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
-                        let vertices: Vec<Vertex> = if let Some(vertices_reader) = primitive_reader.read_positions() {
-                            if let Some(normals_reader) = primitive_reader.read_normals() {
-                                normals_reader
-                                    .zip(vertices_reader)
-                                    .map(|(n, v)| Vertex::new(&v, &n))
-                                    .collect()
-                            } else {
-                                return Err(format!("Model error in {}: mesh has no normals", path));
+
+                        let vertices: Vec<Vertex> = match (
+                            primitive_reader.read_positions(),
+                            primitive_reader.read_normals(),
+                            primitive_reader.read_tangents(),
+                            primitive_reader.read_tex_coords(0),
+                        ) {
+                            (
+                                Some(positions),
+                                Some(normals),
+                                Some(tangents),
+                                Some(uvs),
+                            ) => {
+                                let normals: Vec<[f32; 3]> = normals.collect();
+                                let tangents: Vec<[f32; 4]> = tangents.collect();
+                                let uvs: Vec<[f32; 2]> = match uvs {
+                                    gltf::mesh::util::ReadTexCoords::U8(uvs) => {
+                                        uvs.map(|uv| {
+                                            [uv[0] as f32, uv[1] as f32]
+                                        }).collect()
+                                    },
+                                    gltf::mesh::util::ReadTexCoords::U16(uvs) => {
+                                        uvs.map(|uv| {
+                                            [uv[0] as f32, uv[1] as f32]
+                                        }).collect()
+                                    },
+                                    gltf::mesh::util::ReadTexCoords::F32(uvs) => {
+                                        uvs.collect()
+                                    },
+                                };
+                                positions.enumerate().map(|(i, pos)| {
+                                    let position = Vector3::new(pos[0], pos[1], pos[2]);
+                                    let normal = Vector3::new(normals[i][0], normals[i][1], normals[i][2]);
+                                    let tangent = Vector3::new(tangents[i][0], tangents[i][1], tangents[i][2]);
+                                    let bitangent: Vector3<f32> = normal.cross(tangent) * tangents[i][3];
+                                    let uv = Vector2::new(uvs[i][0], uvs[i][1]);
+                                    Vertex::new(
+                                        position,
+                                        normal,
+                                        tangent,
+                                        bitangent,
+                                        uv,
+                                    )
+                                }).collect()
+                            },
+                            (p, n, t, uv) => {
+                                return Err(format!(
+                                    "Model error in {}: mesh has incomplete vertex data; positions={}, normals={}, tangents={}, uvs={}",
+                                    path,
+                                    p.is_some(),
+                                    n.is_some(),
+                                    t.is_some(),
+                                    uv.is_some(),
+                                ));
                             }
-                        } else {
-                            return Err(format!("Model error in {}: mesh has no vertices", path));
                         };
                         let indices: Vec<u16> = if let Some(indices_reader) = primitive_reader.read_indices() {
                             match indices_reader {

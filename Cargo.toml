@@ -5,10 +5,11 @@ edition = "2018"
 resolver = "2"
 
 [dependencies]
-wgpu = "0.10.1"
-winit = "0.25.0"
+wgpu = "0.14.2"
+winit = "0.27"
 pollster = "0.2.0"
 serde = { version = "1.0.130", features = ["derive"] }
 toml = "0.5"
-gltf = { version = "0.16.0", features = ["utils"] }
+gltf = { version = "1.0.0", features = ["utils"] }
 cgmath = { version = "0.18.0", features = ["swizzle"]}
+env_logger = "0.9"

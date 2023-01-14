@@ -18,7 +18,7 @@ impl Default for PhysicsState {
 }
 
 impl PhysicsState {
-    pub fn init(game_state: &mut GameState, map: &Map, physics_tag_id: &TagId) -> SaltyId {
+    pub fn init(game_state: &mut GameState, _map: &Map, physics_tag_id: &TagId) -> SaltyId {
         game_state.physics.add(PhysicsState {
             tag: physics_tag_id.clone(),
             velocity: Vector3::zero(),
