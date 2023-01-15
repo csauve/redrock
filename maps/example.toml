@@ -22,8 +22,8 @@ colour = [1.0, 0.0, 0.0]
 [globals]
 gravity_scale = 1.0
 player_object = "player"
-player_accel = 0.01
-player_drag_scale = 0.2
+player_accel = 20.0
+player_drag_scale = 1.0
 
 [scenario]
 player_location = {pos = [-5.0, 0.0, 0.0]}

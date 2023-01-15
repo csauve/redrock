@@ -21,34 +21,7 @@ impl Game {
         game
     }
 
-    pub fn apply_action(&mut self, action: PlayerAction) {
-        match action {
-            PlayerAction::Left(held) => {
-                self.state.player_control.left = held;
-            },
-            PlayerAction::Right(held) => {
-                self.state.player_control.right = held;
-            },
-            PlayerAction::Forward(held) => {
-                self.state.player_control.forward = held;
-            },
-            PlayerAction::Back(held) => {
-                self.state.player_control.back = held;
-            },
-            PlayerAction::Jump(held) => {
-                self.state.player_control.up = held;
-            },
-            PlayerAction::Crouch(held) => {
-                self.state.player_control.down = held;
-            },
-            PlayerAction::AimDelta(d_yaw, d_pitch) => {
-                self.state.player_control.aim_delta(d_yaw, d_pitch);
-            },
-            _ => ()
-        }
-    }
-
-    pub fn update(&mut self) {
-        self.state.update(&self.map);
+    pub fn update(&mut self, actions: &[PlayerAction]) -> bool {
+        self.state.update(&self.map, actions)
     }
 }

@@ -5,6 +5,7 @@ state_nodef! {
     pub struct PhysicsState {
         pub tag: TagId,
         pub velocity: Vector3<f32>,
+        pub angular_velocity: Quaternion<f32>,
     }
 }
 
@@ -13,6 +14,7 @@ impl Default for PhysicsState {
         PhysicsState {
             tag: TagId::default(),
             velocity: Vector3::zero(),
+            angular_velocity: Quaternion::zero(),
         }
     }
 }
@@ -22,6 +24,7 @@ impl PhysicsState {
         game_state.physics.add(PhysicsState {
             tag: physics_tag_id.clone(),
             velocity: Vector3::zero(),
+            angular_velocity: Quaternion::zero(),
         }).unwrap()
     }
 }

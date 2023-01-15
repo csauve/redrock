@@ -6,6 +6,7 @@ pub enum PlayerAction {
     Forward(bool),
     Back(bool),
     Jump(bool),
+    Boost(bool),
     Crouch(bool),
     AimDelta(f32, f32),
     Quit,

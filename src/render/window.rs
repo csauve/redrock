@@ -1,8 +1,7 @@
-use crate::input::InputEvent;
 use winit::{
     event_loop::{ControlFlow, EventLoop},
-    event::{Event, WindowEvent, KeyboardInput, VirtualKeyCode, ElementState, DeviceEvent},
-    window::WindowBuilder,
+    event::{Event, WindowEvent, KeyboardInput, VirtualKeyCode, ElementState, DeviceEvent, MouseButton},
+    window::WindowBuilder, dpi::LogicalSize,
 };
 
 pub struct Window {
@@ -10,12 +9,23 @@ pub struct Window {
     event_loop: EventLoop<()>,
 }
 
+#[derive(Debug)]
+pub enum InputEvent {
+    Key {code: u32, pressed: bool, key: Option<VirtualKeyCode>},
+    Click {button: MouseButton, pressed: bool},
+    Mouse {delta: (f64, f64)},
+}
+
 
 impl Window {
-    pub fn new(title: &str) -> Window {
+    pub fn new(title: &str, width: u32, height: u32) -> Window {
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
             .with_title(title)
+            .with_inner_size(LogicalSize {
+                width,
+                height,
+            })
             .build(&event_loop)
             .expect("Failed to initialize window");
 
