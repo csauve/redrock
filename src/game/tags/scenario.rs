@@ -1,5 +1,6 @@
 use super::prelude::*;
 use cgmath::{prelude::*, Vector3, Quaternion, Rad};
+use crate::game::state::transform::Transform;
 
 tag! {
     pub struct Placement {
@@ -22,6 +23,13 @@ impl Placement {
             return yaw_q * pitch_q * roll_q;
         }
         Quaternion::zero()
+    }
+
+    pub fn to_transform(&self) -> Transform {
+        Transform {
+            position: self.to_pos(),
+            rotation: self.to_rot(),
+        }
     }
 }
 

@@ -3,6 +3,7 @@ pub mod player_control;
 pub mod physics_state;
 pub mod object_state;
 pub mod camera_state;
+pub mod transform;
 
 use crate::game::Placement;
 use physics_state::PhysicsState;

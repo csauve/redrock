@@ -6,6 +6,7 @@ use super::prelude::*;
 use super::camera_state::CameraState;
 use super::player_control::PlayerControl;
 use super::object_state::ObjectState;
+use super::transform::Transform;
 use super::PhysicsState;
 use crate::game::PlayerAction;
 
@@ -45,8 +46,7 @@ impl GameState {
             &mut state,
             map,
             &map.globals.player_object,
-            map.scenario.player_location.to_pos(),
-            map.scenario.player_location.to_rot()
+            map.scenario.player_location.to_transform()
         );
         state.camera.object_attachment = state.player_control.target_object;
 
@@ -56,8 +56,7 @@ impl GameState {
                     &mut state,
                     map,
                     &scenery.object_type,
-                    scenery.position.to_pos(),
-                    scenery.position.to_rot()
+                    scenery.position.to_transform()
                 );
             }
         }
@@ -127,10 +126,10 @@ impl GameState {
         //player control physics
         if let Some(player_state) = self.objects.get_mut(self.player_control.target_object) {
             if let Some(physics_state) = self.physics.get_mut(player_state.physics_id) {
-                player_state.rotation = self.player_control.get_aim_rot();
+                player_state.transform.rotation = self.player_control.get_aim_rot();
 
                 let mut movement_vec = self.player_control.get_movement_vector();
-                movement_vec = player_state.rotation.rotate_vector(movement_vec);
+                movement_vec = player_state.transform.rotation.rotate_vector(movement_vec);
 
                 physics_state.velocity += movement_vec * map.globals.player_accel * TICK_DURATION_SEC;
 
@@ -150,8 +149,7 @@ impl GameState {
         let camera_attachment = self.camera.object_attachment;
         if camera_attachment.is_some() {
             if let Some(attached_obj) = self.objects.get(camera_attachment) {
-                self.camera.position = attached_obj.position;
-                self.camera.rotation = attached_obj.rotation;
+                self.camera.transform = attached_obj.transform;
             }
         }
     }
@@ -162,8 +160,10 @@ impl GameState {
             if let Some(object_tag) = map.get_object(&object_state.tag) {
                 if let Some(physics_tag_id) = object_tag.physics {
                     if let Some(_physics_tag) = map.get_physics(&physics_tag_id) {
-                        if let Some(physics_state) = self.physics.get(object_state.physics_id) {
-                            object_state.position += physics_state.velocity * TICK_DURATION_SEC;
+                        if let Some(physics_state) = self.physics.get_mut(object_state.physics_id) {
+                            physics_state.prev_transform = object_state.transform;
+                            object_state.transform.position += physics_state.velocity * TICK_DURATION_SEC;
+                            object_state.transform.rotation += physics_state.angular_velocity * TICK_DURATION_SEC;
                         }
                     }
                 }
@@ -171,5 +171,9 @@ impl GameState {
         }
     
         self.tick = self.tick.wrapping_add(1);
+    }
+
+    pub fn get_tick_interpolation_fraction(&self) -> f32 {
+        self.accum_nanos as f32 / TICK_DURATION_NANOS as f32
     }
 }

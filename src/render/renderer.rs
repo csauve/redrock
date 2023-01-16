@@ -5,6 +5,7 @@ use wgpu;
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
 use cgmath::{prelude::*, Matrix4, Vector3, Vector4};
 use crate::game::Game;
+use crate::game::state::transform::Transform;
 use crate::render::Window;
 
 use super::model::{Vertex, FaceIndices, ModelInstance, Model};
@@ -424,13 +425,15 @@ impl Renderer {
     }
 
     pub fn render(&mut self, game: &Game) {
+        let interpolation_fraction = game.state.get_tick_interpolation_fraction();
+        
         if let Ok(output) = self.surface.get_current_texture() {
             let output_view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
             //load camera buffer
             let camera_uniform = CameraUniform {
                 view_proj: GpuMat4(game.state.camera.to_camera_matrix(self.config.width, self.config.height)),
-                world_position: GpuVec3(game.state.camera.position),
+                world_position: GpuVec3(game.state.camera.transform.position),
             };
             self.queue.write_buffer(&self.camera_buffer, 0, Renderer::bytes_slice(&[camera_uniform]));
             let environment_uniform = EnvironmentUniform::default();
@@ -440,9 +443,14 @@ impl Renderer {
             let mut model_instances: HashMap<String, Vec<ModelInstance>> = HashMap::new();
             for (_id, object_state) in game.state.objects.iter() {
                 if let Some(object_tag) = game.map.object.get(&object_state.tag) {
+                    let transform = if let Some(phys) = game.state.physics.get(object_state.physics_id) {
+                        Transform::interpolate(&phys.prev_transform, &object_state.transform, interpolation_fraction)
+                    } else {
+                        object_state.transform
+                    };
                     let instance = ModelInstance {
-                        transform_matrix: object_state.to_transform_matrix(),
-                        normal_matrix: object_state.to_rotation_matrix(),
+                        transform_matrix: transform.to_matrix(),
+                        normal_matrix: transform.to_rotation_matrix(),
                         colour: Vector3::new(object_tag.colour[0], object_tag.colour[1], object_tag.colour[2]),
                     };
                     let model_path: String = object_tag.model.into();
