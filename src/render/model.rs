@@ -24,28 +24,6 @@ impl Vertex {
     }
 }
 
-//deprecated
-pub type FaceIndices = [u16; 3];
-
-#[derive(Copy, Clone, Debug)]
-#[repr(C)]
-pub struct ModelInstance {
-    pub transform_matrix: Matrix4<f32>,
-    pub normal_matrix: Matrix3<f32>,
-    pub colour: Vector3<f32>,
-    //todo: bone data
-}
-
-impl Default for ModelInstance {
-    fn default() -> Self {
-        ModelInstance {
-            transform_matrix: Matrix4::one(),
-            normal_matrix: Matrix3::one(),
-            colour: Vector3::unit_x(),
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct Model {
     pub vertices: Vec<Vertex>,
@@ -166,6 +144,5 @@ mod tests {
     #[test]
     fn test_mesh_size() {
         assert_eq!(24, std::mem::size_of::<Vertex>());
-        assert_eq!(6, std::mem::size_of::<FaceIndices>());
     }
 }

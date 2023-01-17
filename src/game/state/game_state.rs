@@ -10,7 +10,7 @@ use super::transform::Transform;
 use super::PhysicsState;
 use crate::game::PlayerAction;
 
-const TICK_RATE: u32 = 10;
+const TICK_RATE: u32 = 120;
 const TICK_DURATION_NANOS: u32 = 1000000000 / TICK_RATE;
 const TICK_DURATION_SEC: f32 = 1.0 / TICK_RATE as f32;
 // const MAX_TICKS_PER_FRAME: u32 = 10; //todo: prevent spiral of death
@@ -99,13 +99,6 @@ impl GameState {
         if let Ok(elapsed) = curr_time.duration_since(self.prev_time) {
             self.accum_nanos += elapsed.as_nanos();
 
-            while self.accum_nanos >= TICK_DURATION_NANOS as u128 {
-                self.update_fixed(map);
-                self.accum_nanos -= TICK_DURATION_NANOS as u128;
-            }
-
-            self.update_variable(map);
-
             for action in actions {
                 match action {
                     PlayerAction::Quit => {
@@ -116,6 +109,13 @@ impl GameState {
                     },
                 }
             }
+
+            while self.accum_nanos >= TICK_DURATION_NANOS as u128 {
+                self.update_fixed(map);
+                self.accum_nanos -= TICK_DURATION_NANOS as u128;
+            }
+
+            self.update_variable(map);
 
             self.prev_time = curr_time;
         }
@@ -143,13 +143,6 @@ impl GameState {
                 if physics_state.velocity.magnitude2() != 0.0 {
                     physics_state.velocity -= physics_state.velocity.normalize_to(drag) * TICK_DURATION_SEC;
                 }
-            }
-        }
-
-        let camera_attachment = self.camera.object_attachment;
-        if camera_attachment.is_some() {
-            if let Some(attached_obj) = self.objects.get(camera_attachment) {
-                self.camera.transform = attached_obj.transform;
             }
         }
     }

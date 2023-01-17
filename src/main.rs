@@ -15,7 +15,7 @@ use pollster;
 use env_logger;
 
 const WINDOW_TITLE: &str = "redrock";
-const WINDOW_SIZE: [u32; 2] = [1920, 1080];
+const WINDOW_SIZE: [u32; 2] = [800, 600];
 
 fn main() {
     env_logger::init();

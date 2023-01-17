@@ -104,5 +104,5 @@ fn fragment_main(in: FragmentInput) -> @location(0) vec4<f32> {
   let specular: vec3<f32> = saturate(nl) * specular_colour * specular_amt * specular_amt;
   
   let final_colour: vec3<f32> = mix(diffuse + specular, fog_colour, fog_amt);
-  return clamp(vec4<f32>(final_colour, 1.0), vec4<f32>(0.0), vec4<f32>(1.0));
+  return vec4<f32>(final_colour, 1.0);
 }
