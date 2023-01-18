@@ -10,7 +10,8 @@ use super::transform::Transform;
 use super::PhysicsState;
 use crate::game::PlayerAction;
 
-const TICK_RATE: u32 = 120;
+const GRAV: f32 = 0.1;
+const TICK_RATE: u32 = 60;
 const TICK_DURATION_NANOS: u32 = 1000000000 / TICK_RATE;
 const TICK_DURATION_SEC: f32 = 1.0 / TICK_RATE as f32;
 // const MAX_TICKS_PER_FRAME: u32 = 10; //todo: prevent spiral of death
@@ -110,12 +111,12 @@ impl GameState {
                 }
             }
 
+            self.update_variable(map);
+
             while self.accum_nanos >= TICK_DURATION_NANOS as u128 {
                 self.update_fixed(map);
                 self.accum_nanos -= TICK_DURATION_NANOS as u128;
             }
-
-            self.update_variable(map);
 
             self.prev_time = curr_time;
         }
@@ -152,8 +153,11 @@ impl GameState {
         for (_id, object_state) in self.objects.iter_mut() {
             if let Some(object_tag) = map.get_object(&object_state.tag) {
                 if let Some(physics_tag_id) = object_tag.physics {
-                    if let Some(_physics_tag) = map.get_physics(&physics_tag_id) {
+                    if let Some(physics_tag) = map.get_physics(&physics_tag_id) {
                         if let Some(physics_state) = self.physics.get_mut(object_state.physics_id) {
+                            // let grav = GRAV * physics_tag.mass * 1.0 / object_state.transform.position.magnitude2();
+                            // physics_state.velocity += (-object_state.transform.position) * grav;
+                            
                             physics_state.prev_transform = object_state.transform;
                             object_state.transform.position += physics_state.velocity * TICK_DURATION_SEC;
                             object_state.transform.rotation += physics_state.angular_velocity * TICK_DURATION_SEC;

@@ -1,2 +1,5 @@
 /target
 *.blend1
+*.png~
+*.tif~
+.DS_Store

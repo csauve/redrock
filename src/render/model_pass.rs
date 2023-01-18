@@ -5,17 +5,23 @@ use wgpu;
 use crate::game::Game;
 use crate::game::state::{transform::Transform, object_state::ObjectState};
 
-use super::common::{create_buffer, create_texture, bytes_slice, Texture};
+use super::common::{create_buffer, bytes_slice};
+use super::texture::Texture;
 use super::model::{Vertex, Model};
 use super::gpu_types::*;
 
 const MAX_INSTANCES: usize = 128;
 
-struct ModelBuffers {
+struct LoadedModel {
     vertex_buffer: wgpu::Buffer,
     vertex_count: u32,
     index_buffer: wgpu::Buffer,
     indices_count: u32,
+}
+
+struct LoadedTexture {
+    texture: Texture,
+    bind_group: wgpu::BindGroup,
 }
 
 #[derive(Copy, Clone)]
@@ -67,7 +73,7 @@ impl Default for ModelInstance {
 impl Default for EnvironmentUniform {
     fn default() -> EnvironmentUniform {
         EnvironmentUniform {
-            fog_colour: GpuVec4(Vector4::new(0.2, 0.2, 0.8, 0.8)),
+            fog_colour: GpuVec4(Vector4::new(0.1, 0.1, 0.3, 0.8)),
             fog_min_distance: GpuFloat(1.0),
             fog_max_distance: GpuFloat(25.0),
             sun_colour: GpuVec3(Vector3::new(0.8, 0.8, 0.5)),
@@ -77,7 +83,9 @@ impl Default for EnvironmentUniform {
 }
 
 pub struct ModelPass {
-    models: HashMap<String, ModelBuffers>,
+    models: HashMap<String, LoadedModel>,
+    textures: HashMap<String, LoadedTexture>,
+    texture_bind_group_layout: wgpu::BindGroupLayout,
     camera_buffer: wgpu::Buffer,
     environment_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
@@ -196,7 +204,7 @@ impl ModelPass {
         );
 
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
+            label: Some("model bind group layout"),
             entries: &[
                 //camera
                 wgpu::BindGroupLayoutEntry {
@@ -219,18 +227,44 @@ impl ModelPass {
                         min_binding_size: None,
                     },
                     count: None
-                }
+                },
+            ],
+        });
+
+        let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("model textures bind group layout"),
+            entries: &[
+                //texture
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None
+                },
+                //sampler
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None
+                },
             ],
         });
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
+            label: Some("model bind group"),
             layout: &bind_group_layout,
             entries: &[
+                //camera
                 wgpu::BindGroupEntry {
                     binding: 0,
                     resource: camera_buffer.as_entire_binding(),
                 },
+                //environment
                 wgpu::BindGroupEntry {
                     binding: 1,
                     resource: environment_buffer.as_entire_binding(),
@@ -239,15 +273,17 @@ impl ModelPass {
         });
         
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor  {
-            label: None,
+            label: Some("model pipeline layout"),
             bind_group_layouts: &[
-                &bind_group_layout
+                &bind_group_layout,
+                &texture_bind_group_layout,
+                &texture_bind_group_layout,
             ],
             push_constant_ranges: &[],
         });
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: None,
+            label: Some("model pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
@@ -258,7 +294,7 @@ impl ModelPass {
                 module: &shader,
                 entry_point: "fragment_main",
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: config.format,
+                    format: wgpu::TextureFormat::Rgba16Float,
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
                 })]
@@ -291,18 +327,20 @@ impl ModelPass {
 
         ModelPass {
             models: HashMap::new(),
+            textures: HashMap::new(),
             zbuffer,
             camera_buffer,
             environment_buffer,
             bind_group,
             pipeline,
+            texture_bind_group_layout,
             model_instances_buffer,
         }
     }
 
 
     fn create_zbuffer_texture(device: &wgpu::Device, width: u32, height: u32) -> Texture {
-        create_texture(
+        Texture::create(
             device,
             width,
             height,
@@ -316,12 +354,40 @@ impl ModelPass {
         self.zbuffer = Self::create_zbuffer_texture(device, config.width, config.height);
     }
 
+    fn load_texture(&mut self, path: &str, device: &wgpu::Device, queue: &wgpu::Queue) {
+        if self.textures.contains_key(path) {
+            return;
+        }
+        if let Some(texture) = Texture::load(path, device, queue) {
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("model texture bind group"),
+                layout: &self.texture_bind_group_layout,
+                entries: &[
+                    //texture
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&texture.view),
+                    },
+                    //sampler
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                    },
+                ]
+            });
+            self.textures.insert(String::from(path), LoadedTexture {
+                texture,
+                bind_group
+            });
+        }
+    }
+
     fn load_model(&mut self, path: &str, device: &wgpu::Device) {
         if !self.models.contains_key(path) {
             let model = Model::from_gltf(path).expect("Failed to load model");
             let vertex_buffer = create_buffer(device, wgpu::BufferUsages::VERTEX, model.vertices_slice());
             let index_buffer = create_buffer(device, wgpu::BufferUsages::INDEX, model.indices_slice());
-            self.models.insert(path.into(), ModelBuffers {
+            self.models.insert(path.into(), LoadedModel {
                 vertex_buffer,
                 vertex_count: model.vertices_slice().len() as u32,
                 index_buffer,
@@ -332,6 +398,11 @@ impl ModelPass {
 
   pub fn render(&mut self, game: &Game, output_view: &wgpu::TextureView, queue: &mut wgpu::Queue, config: &wgpu::SurfaceConfiguration, device: &wgpu::Device) {
     let interpolation_fraction = game.state.get_tick_interpolation_fraction();
+
+    let diffuse_path = "maps/groundtile.tif";
+    self.load_texture(diffuse_path, device, queue);
+    let bump_path = "maps/groundtile_bump.tif";
+    self.load_texture(bump_path, device, queue);
 
     //load camera buffer
     let camera_attachment = game.state.camera.object_attachment;
@@ -369,10 +440,10 @@ impl ModelPass {
     }
 
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: None,
+        label: Some("model encoder"),
     });
     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: None,
+        label: Some("model pass"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
             view: &output_view,
             resolve_target: None,
@@ -416,11 +487,16 @@ impl ModelPass {
             }
         );
         let instance_range = (start_index as u32)..(start_index as u32 + instances_added as u32);
-        if let Some(model) = self.models.get(model_path) {
-            render_pass.set_vertex_buffer(0, model.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(model.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        if let Some(model_bufs) = self.models.get(model_path) {
+            let diffuse = self.textures.get(diffuse_path).unwrap();
+            render_pass.set_bind_group(1, &diffuse.bind_group, &[]);
+            let bump = self.textures.get(bump_path).unwrap();
+            render_pass.set_bind_group(2, &bump.bind_group, &[]);
+
+            render_pass.set_vertex_buffer(0, model_bufs.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(model_bufs.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.set_vertex_buffer(1, self.model_instances_buffer.slice(..));
-            render_pass.draw_indexed(0..model.indices_count, 0, instance_range);
+            render_pass.draw_indexed(0..model_bufs.indices_count, 0, instance_range);
         }
     }
 

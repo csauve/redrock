@@ -1,6 +1,7 @@
 use wgpu;
 use cgmath::{prelude::*, Vector4};
-use super::common::{Texture, create_buffer, bytes_slice};
+use super::common::{create_buffer, bytes_slice};
+use super::texture::Texture;
 use super::gpu_types::*;
 
 pub struct PostPass {
@@ -67,7 +68,7 @@ impl PostPass {
         };
 
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
+            label: Some("post bind group layout"),
             entries: &[
                 //prev pass texture
                 wgpu::BindGroupLayoutEntry {
@@ -102,7 +103,7 @@ impl PostPass {
         });
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
+            label: Some("post bind group"),
             layout: &bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -121,7 +122,7 @@ impl PostPass {
         });
         
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor  {
-            label: None,
+            label: Some("post pipeline layout"),
             bind_group_layouts: &[
                 &bind_group_layout
             ],
@@ -129,7 +130,7 @@ impl PostPass {
         });
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: None,
+            label: Some("post pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
@@ -175,15 +176,15 @@ impl PostPass {
     pub fn render(&self, device: &wgpu::Device, input_view: &wgpu::TextureView, output_view: &wgpu::TextureView, queue: &mut wgpu::Queue) {
         let effects_uniform = EffectsUniform {
             multiply_colour: GpuVec4(Vector4::new(1.0, 0.0, 0.0, 0.0)),
-            blur_radius: GpuFloat(0.0),
+            blur_radius: GpuFloat(0.000),
         };
         queue.write_buffer(&self.effects_buffer, 0, bytes_slice(&[effects_uniform]));
         
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: None,
+            label: Some("post encoder"),
         });
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: None,
+            label: Some("post pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: &output_view,
                 resolve_target: None,

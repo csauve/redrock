@@ -7,7 +7,7 @@ colour = [0.0, 1.0, 0.0]
 
 [object.axis]
 model = "maps/axis.gltf"
-colour = [1.0, 1.0, 1.0]
+colour = [0.5, 0.5, 0.5]
 
 [object.crate]
 physics = "biped"
@@ -37,12 +37,12 @@ object_type = "tree"
 position = {pos = [20.0, 0.0, 0.0], rot = [0.0, 0.0, -90.0]}
 
 [[scenario.scenery]]
-object_type = "tree"
-position = {pos = [15.0, 0.0, 0.0]}
+object_type = "axis"
+position = {pos = [25.0, 0.0, 0.0]}
 
 [[scenario.scenery]]
 object_type = "crate"
-position = {pos = [10.0, 0.0, 0.0]}
+position = {pos = [10.0, 0.0, 0.0], rot = [0.0, 90.0, 0.0]}
 
 [[scenario.scenery]]
 object_type = "crate"
@@ -58,4 +58,4 @@ position = {pos = [0.0, 0.0, 5.0]}
 
 [[scenario.scenery]]
 object_type = "crate"
-position = {pos = [0.0, 0.0, 10.0]}
+position = {pos = [0.0, 10.0, 10.0]}

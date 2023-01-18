@@ -13,3 +13,8 @@ toml = "0.5"
 gltf = { version = "1.0.0", features = ["utils"] }
 cgmath = { version = "0.18.0", features = ["swizzle"]}
 env_logger = "0.9"
+
+[dependencies.image]
+version = "0.24"
+default-features = false
+features = ["png", "tiff"]

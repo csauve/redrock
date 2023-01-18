@@ -1,12 +1,11 @@
 use std::collections::HashMap;
-// use gltf::json::texture;
 use wgpu;
 use cgmath::{prelude::*, Matrix4, Vector3, Vector4};
 use crate::game::Game;
 use crate::game::state::{transform::Transform, object_state::ObjectState};
 use crate::render::Window;
 
-use super::common::{Texture, create_texture};
+use super::texture::Texture;
 use super::model_pass::ModelPass;
 use super::post_pass::PostPass;
 use super::gpu_types::*;
@@ -64,12 +63,11 @@ impl Renderer {
         surface.configure(&device, &config);
 
         let model_pass = ModelPass::new(&device, &config);
-        dbg!(config.format);
-        let model_pass_output = create_texture(
+        let model_pass_output = Texture::create(
             &device,
             config.width,
             config.height,
-            config.format,
+            wgpu::TextureFormat::Rgba16Float,
             wgpu::AddressMode::ClampToEdge,
             None
         );
