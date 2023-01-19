@@ -5,6 +5,11 @@ mass = 1.0
 model = "maps/tree.gltf"
 colour = [0.0, 1.0, 0.0]
 
+[object.ball]
+model = "maps/ball.gltf"
+colour = [0.5, 0.5, 0.5]
+
+
 [object.axis]
 model = "maps/axis.gltf"
 colour = [0.5, 0.5, 0.5]
@@ -26,6 +31,7 @@ player_accel = 20.0
 player_drag_scale = 1.0
 
 [scenario]
+fog_colour = [0.1, 0.1, 0.5, 0.9]
 player_location = {pos = [-5.0, 0.0, 0.0]}
 
 [[scenario.scenery]]
@@ -34,15 +40,15 @@ position = {pos = [0.0, 0.0, 0.0]}
 
 [[scenario.scenery]]
 object_type = "tree"
-position = {pos = [20.0, 0.0, 0.0], rot = [0.0, 0.0, -90.0]}
+position = {pos = [20.0, 0.0, 0.0], rot = [0.0, 45.0, -90.0]}
 
 [[scenario.scenery]]
 object_type = "axis"
-position = {pos = [25.0, 0.0, 0.0]}
+position = {pos = [25.0, 0.0, 0.0], rot = [30.0, 120.0, 0.0]}
 
 [[scenario.scenery]]
-object_type = "crate"
-position = {pos = [10.0, 0.0, 0.0], rot = [0.0, 90.0, 0.0]}
+object_type = "ball"
+position = {pos = [10.0, 5.0, 0.0]}
 
 [[scenario.scenery]]
 object_type = "crate"

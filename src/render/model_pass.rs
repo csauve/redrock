@@ -34,13 +34,13 @@ struct CameraUniform {
 impl Default for CameraUniform {
     fn default() -> CameraUniform {
         CameraUniform {
-            view_proj: GpuMat4(Matrix4::<f32>::one()),
-            world_position: GpuVec3(Vector3::<f32>::zero()),
+            view_proj: Matrix4::<f32>::one().into(),
+            world_position: Vector3::<f32>::zero().into(),
         }
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C, align(16))]
 struct EnvironmentUniform {
     fog_colour: GpuVec4,
@@ -66,18 +66,6 @@ impl Default for ModelInstance {
             transform_matrix: Matrix4::one(),
             normal_matrix: Matrix3::one(),
             colour: Vector3::unit_x(),
-        }
-    }
-}
-
-impl Default for EnvironmentUniform {
-    fn default() -> EnvironmentUniform {
-        EnvironmentUniform {
-            fog_colour: GpuVec4(Vector4::new(0.1, 0.1, 0.3, 0.8)),
-            fog_min_distance: GpuFloat(1.0),
-            fog_max_distance: GpuFloat(25.0),
-            sun_colour: GpuVec3(Vector3::new(0.8, 0.8, 0.5)),
-            sun_direction: GpuVec3(Vector3::new(0.1, 0.5, 1.0).normalize()),
         }
     }
 }
@@ -354,11 +342,11 @@ impl ModelPass {
         self.zbuffer = Self::create_zbuffer_texture(device, config.width, config.height);
     }
 
-    fn load_texture(&mut self, path: &str, device: &wgpu::Device, queue: &wgpu::Queue) {
+    fn load_texture(&mut self, path: &str, device: &wgpu::Device, queue: &wgpu::Queue, format: wgpu::TextureFormat) {
         if self.textures.contains_key(path) {
             return;
         }
-        if let Some(texture) = Texture::load(path, device, queue) {
+        if let Some(texture) = Texture::load(path, device, queue, format) {
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("model texture bind group"),
                 layout: &self.texture_bind_group_layout,
@@ -399,10 +387,10 @@ impl ModelPass {
   pub fn render(&mut self, game: &Game, output_view: &wgpu::TextureView, queue: &mut wgpu::Queue, config: &wgpu::SurfaceConfiguration, device: &wgpu::Device) {
     let interpolation_fraction = game.state.get_tick_interpolation_fraction();
 
-    let diffuse_path = "maps/groundtile.tif";
-    self.load_texture(diffuse_path, device, queue);
-    let bump_path = "maps/groundtile_bump.tif";
-    self.load_texture(bump_path, device, queue);
+    let diffuse_path = "maps/default_diffuse.tif";
+    self.load_texture(diffuse_path, device, queue, wgpu::TextureFormat::Rgba8UnormSrgb);
+    let bump_path = "maps/default_bump.tif";
+    self.load_texture(bump_path, device, queue, wgpu::TextureFormat::Rgba8Unorm);
 
     //load camera buffer
     let camera_attachment = game.state.camera.object_attachment;
@@ -417,7 +405,13 @@ impl ModelPass {
         world_position: GpuVec3(camera_transform.position),
     };
     queue.write_buffer(&self.camera_buffer, 0, bytes_slice(&[camera_uniform]));
-    let environment_uniform = EnvironmentUniform::default();
+    let environment_uniform = EnvironmentUniform {
+        fog_colour: game.map.scenario.fog_colour.unwrap_or([0.1, 0.1, 0.3, 0.8]).into(),
+        fog_max_distance: game.map.scenario.fog_max_distance.unwrap_or(25f32).into(),
+        fog_min_distance: game.map.scenario.fog_max_distance.unwrap_or(1f32).into(),
+        sun_colour: game.map.scenario.sun_colour.unwrap_or([0.8, 0.8, 0.5]).into(),
+        sun_direction: game.map.scenario.sun_direction.unwrap_or([0.1, 0.5, 1.0]).into(),
+    };
     queue.write_buffer(&self.environment_buffer, 0, bytes_slice(&[environment_uniform]));
 
     //load model buffers

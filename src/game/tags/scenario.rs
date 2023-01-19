@@ -42,6 +42,11 @@ tag! {
 
 tag! {
     pub struct Scenario {
+        pub sun_direction: Option<[f32; 3]>,
+        pub sun_colour: Option<[f32; 3]>,
+        pub fog_colour: Option<[f32; 4]>,
+        pub fog_min_distance: Option<f32>,
+        pub fog_max_distance: Option<f32>,
         pub player_location: Placement,
         pub scenery: Option<Vec<SceneryPlacement>>,
     }

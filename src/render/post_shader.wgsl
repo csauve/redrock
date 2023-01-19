@@ -10,6 +10,7 @@ struct FragmentInput {
 
 struct EffectsUniform {
   multiply_colour: vec4<f32>,
+  screen_colour: vec4<f32>,
   blur_radius: f32,
 }
 
@@ -45,7 +46,7 @@ fn fragment_main(in: FragmentInput) -> @location(0) vec4<f32> {
 
   if (effects.blur_radius > 0.0) {
     var blurred: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
-
+    // let unique_phase = in.clip_position.x + in.clip_position.y;
     let n: i32 = 48;
     for (var i: i32 = 0; i < 48; i++) {
       let theta: f32 = 2.39996322973 * f32(i); //2pi/phi^2
@@ -58,7 +59,8 @@ fn fragment_main(in: FragmentInput) -> @location(0) vec4<f32> {
     final_colour = blurred;
   }
   
-  final_colour = mix(final_colour, prev * effects.multiply_colour.rgb, effects.multiply_colour.a);
+  final_colour = mix(final_colour, final_colour * effects.multiply_colour.rgb, effects.multiply_colour.a);
+  final_colour = mix(final_colour, 1.0 - ((1.0 - final_colour) * (1.0 - effects.screen_colour.rgb)), effects.screen_colour.a);
   // final_colour = smoothstep(vec3<f32>(0.0, 0.0, 0.0), vec3<f32>(2.0, 2.0, 2.0), final_colour);
   return vec4<f32>(final_colour, 1.0); //clamped by Bgra8UnormSrgb
 }

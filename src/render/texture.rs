@@ -14,7 +14,7 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn load(path: &str, device: &wgpu::Device, queue: &wgpu::Queue) -> Option<Texture> {
+    pub fn load(path: &str, device: &wgpu::Device, queue: &wgpu::Queue, format: wgpu::TextureFormat) -> Option<Texture> {
         if let Ok(f) = File::open(path) {
             let mut reader = BufReader::new(f);
             if let Ok(img) = image::load(reader, image::ImageFormat::Tiff) {
@@ -24,7 +24,7 @@ impl Texture {
                     device,
                     dimensions.0,
                     dimensions.1,
-                    wgpu::TextureFormat::Rgba8UnormSrgb,
+                    format,
                     wgpu::AddressMode::Repeat,
                     None
                 );

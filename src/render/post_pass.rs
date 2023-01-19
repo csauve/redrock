@@ -12,20 +12,12 @@ pub struct PostPass {
     effects_buffer: wgpu::Buffer,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C, align(16))]
 struct EffectsUniform {
     multiply_colour: GpuVec4,
+    screen_colour: GpuVec4,
     blur_radius: GpuFloat,
-}
-
-impl Default for EffectsUniform {
-    fn default() -> EffectsUniform {
-        EffectsUniform {
-            multiply_colour: GpuVec4(Vector4::zero()),
-            blur_radius: GpuFloat(0.0),
-        }
-    }
 }
 
 impl PostPass {
@@ -175,8 +167,9 @@ impl PostPass {
 
     pub fn render(&self, device: &wgpu::Device, input_view: &wgpu::TextureView, output_view: &wgpu::TextureView, queue: &mut wgpu::Queue) {
         let effects_uniform = EffectsUniform {
-            multiply_colour: GpuVec4(Vector4::new(1.0, 0.0, 0.0, 0.0)),
-            blur_radius: GpuFloat(0.000),
+            multiply_colour: Vector4::new(1.0, 0.0, 0.0, 0.0).into(),
+            screen_colour: Vector4::new(1.0, 0.0, 0.0, 0.0).into(),
+            blur_radius: GpuFloat(0.005),
         };
         queue.write_buffer(&self.effects_buffer, 0, bytes_slice(&[effects_uniform]));
         

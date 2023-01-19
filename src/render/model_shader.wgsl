@@ -80,7 +80,7 @@ fn vertex_main(vert: VertexInput, instance: InstanceInput) -> FragmentInput {
     world_normal,
   ));
 
-  let world_light: vec3<f32> = environment.sun_direction;
+  let world_light: vec3<f32> = normalize(environment.sun_direction);
   let world_eye: vec3<f32> = normalize(camera.world_position - world_position.xyz);
 
   var out: FragmentInput;
@@ -95,13 +95,12 @@ fn vertex_main(vert: VertexInput, instance: InstanceInput) -> FragmentInput {
 
 @fragment
 fn fragment_main(in: FragmentInput) -> @location(0) vec4<f32> {
-  let z = vec3<f32>(0.0, 0.0, 1.0);
+  // let z = vec3<f32>(0.0, 0.0, 1.0);
   let bump_map: vec4<f32> = textureSample(bump_texture, bump_sampler, in.uv).rgba;
-  let tangent_normal: vec3<f32> = vec3<f32>(bump_map.xyz * 2.0 - 1.0);
-  // let tangent_normal: vec3<f32> = z;
+  let tangent_normal: vec3<f32> = normalize(vec3<f32>(bump_map.xyz * 2.0 - 1.0));
 
-  let zl: f32 = saturate(sign(in.tangent_light.z));
-  let nl: f32 = saturate(dot(tangent_normal, in.tangent_light));  
+  let shadow: f32 = saturate(in.tangent_light.z * 10.0);
+  let nl: f32 = saturate(dot(tangent_normal, in.tangent_light)) * shadow;
 
   //fog
   let dist = abs(length(camera.world_position - in.world_position));
@@ -109,20 +108,19 @@ fn fragment_main(in: FragmentInput) -> @location(0) vec4<f32> {
   let fog_colour: vec3<f32> = environment.fog_colour.rgb;
 
   //diffuse
-  // let diffuse_colour: vec3<f32> = textureSample(diffuse_texture, diffuse_sampler, in.uv).rgb;
-  let diffuse_colour: vec3<f32> = in.instance_colour;
-  let ambient_amt: f32 = tangent_normal.z;
+  let diffuse_colour: vec3<f32> = textureSample(diffuse_texture, diffuse_sampler, in.uv).rgb;
+  // let diffuse_colour: vec3<f32> = in.instance_colour;
+  let ambient_amt: f32 = tangent_normal.z * 0.75;
   let ambient: vec3<f32> = diffuse_colour * fog_colour * ambient_amt;
   let sun: vec3<f32> = diffuse_colour * environment.sun_colour * nl;
-  let diffuse: vec3<f32> = sun;
+  let diffuse: vec3<f32> = sun + ambient;
 
   //spec
   let specular_colour: vec3<f32> = environment.sun_colour;
-  let specular_amt = nl * saturate(-dot(-reflect(in.tangent_light, tangent_normal), in.tangent_eye));
+  let specular_amt = nl * saturate(dot(reflect(-in.tangent_light, tangent_normal), in.tangent_eye));
   let specular: vec3<f32> = specular_colour * specular_amt * specular_amt;
   
   var final_colour: vec3<f32> = diffuse;
-  // final_colour += specular;
   final_colour = mix(final_colour, fog_colour, fog_amt);
   return vec4<f32>(final_colour, 1.0);
 }

@@ -39,6 +39,7 @@ impl Model {
                     let mesh = root_node.mesh().unwrap();
                     for primitive in mesh.primitives() {
                         let primitive_reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
+                        let _material_name = primitive.material().name().unwrap_or("default");
 
                         let vertices: Vec<Vertex> = match (
                             primitive_reader.read_positions(),
