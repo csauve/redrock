@@ -169,7 +169,7 @@ impl PostPass {
         let effects_uniform = EffectsUniform {
             multiply_colour: Vector4::new(1.0, 0.0, 0.0, 0.0).into(),
             screen_colour: Vector4::new(1.0, 0.0, 0.0, 0.0).into(),
-            blur_radius: GpuFloat(0.005),
+            blur_radius: GpuFloat(0.00),
         };
         queue.write_buffer(&self.effects_buffer, 0, bytes_slice(&[effects_uniform]));
         
