@@ -18,3 +18,8 @@ pub fn degrees_to_radians(degrees: f32) -> f32 {
 pub fn radians_to_degrees(radians: f32) -> f32 {
     radians / RADIANS_PER_DEGREE
 }
+
+#[inline]
+pub fn realcmp(v: f32, to: f32, range: f32) -> bool {
+    v >= (to - range) && v <= (to + range)
+}

@@ -1,6 +1,7 @@
 pub mod tags;
 pub mod actions;
 pub mod state;
+mod physics;
 
 use state::game_state::GameState;
 use tags::{Map, Placement};
